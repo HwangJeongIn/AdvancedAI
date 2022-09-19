@@ -23,15 +23,10 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 
 protected:
-
 	virtual void PostInitializeComponents() override;
 	virtual FVector GetPawnViewLocation() const override;
 
 private:
-
-	float GetAirResistance();
-	float GetFrictionResistance();
-
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 
@@ -41,28 +36,9 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	UCameraComponent* CameraComp;
 
-	UPROPERTY(EditDefaultsOnly)
-	float DefaultMass;
 
-
-	UPROPERTY(EditDefaultsOnly)
 	float MovingFactor;
-
-	UPROPERTY(EditDefaultsOnly)
-	float DefaultMovingForce;
-
-	UPROPERTY(EditDefaultsOnly)
 	float RotationFactor;
 
-	UPROPERTY(EditDefaultsOnly)
-	float DefaultTurningRadius;
-
-	UPROPERTY(EditDefaultsOnly)
-	float DragCoefficient;
-
-	UPROPERTY(EditDefaultsOnly)
-	float FrictionCoefficient;
-
-	UPROPERTY(VisibleAnywhere)
-	float DefaultGravity;
+	float MinTurningRadius;
 };

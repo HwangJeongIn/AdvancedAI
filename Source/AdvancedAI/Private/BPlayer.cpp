@@ -56,13 +56,31 @@ ABPlayer::ABPlayer()
 
 	CameraComp = CreateDefaultSubobject<UCameraComponent>("CameraComp");
 	CameraComp->SetupAttachment(SpringArmComp);
+
+	// 시뮬레이션 테스트
+	/*
+	MovingFactor = 0.0f;
+	RotationFactor = 0.0f;
+
+	DefaultMovingForce = 10000;
+	DefaultTurningRadius = 10;
+
+	DragCoefficient = 16;
+	FrictionCoefficient = 0.015;
+	*/
 }
 
 // Called when the game starts or when spawned
 void ABPlayer::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	// 시뮬레이션 테스트
+	/*
+	// 중력이 중간에 변한다면 실시간으로 계산해야한다.
+	DefaultGravity = GetWorld()->GetGravityZ() / 100;
+	DefaultMass = GetCharacterMovement()->Mass;
+	*/
 }
 
 // Called every frame
@@ -70,7 +88,49 @@ void ABPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	// 시뮬레이션 테스트
+	/*
+	FRotator ControlRot = GetControlRotation();
+	ControlRot.Pitch = 0.0f;
+	ControlRot.Roll = 0.0f;
+
+	FVector CharacterForward = ControlRot.Vector();
+
+	float CurrentForceValue = DefaultMovingForce * MovingFactor;
+	const float CurrentResistanceValue = GetAirResistance() + GetFrictionResistance();
+
+	CurrentForceValue -= CurrentResistanceValue;
+
+	FVector Acceleration = CharacterForward * CurrentForceValue / DefaultMass;
+	FVector FinalVelocity = GetVelocity() + Acceleration * DeltaSeconds;
+	UPrimitiveComponent* RootComp = Cast<UPrimitiveComponent>(RootComponent);
+	if (RootComp)
+	{
+		B_LOG_DEV("%.1f, %.1f, %.1f", FinalVelocity.X, FinalVelocity.Y, FinalVelocity.Z);
+		RootComp->SetPhysicsLinearVelocity(FinalVelocity);
+	}
+
+	//B_LOG_DEV("%.1f, %.1f, %.1f", finalMovingForce.X, finalMovingForce.Y, finalMovingForce.Z);
+	//GetCharacterMovement()->AddForce(finalMovingForce);
+	*/
 }
+
+// 시뮬레이션 테스트
+/*
+float ABPlayerCharacter::GetAirResistance()
+{
+	// 마찰력 = (속도와 반대 방향) * 속도^2 * 마찰계수
+	const FVector CurrentVelocity = GetVelocity();
+	return CurrentVelocity.SizeSquared() * DragCoefficient;
+}
+
+float ABPlayerCharacter::GetFrictionResistance()
+{
+	// 공기저항 = (속도와 반대 방향) * 수직항력 * 항력계수 // 수직항력의 경우 지면을 수평으로 간주하고 계산한다. (M * G)
+	const float NormalForce = DefaultMass * DefaultGravity;
+	return FrictionCoefficient * NormalForce;
+}
+*/
 
 // Called to bind functionality to input
 void ABPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)

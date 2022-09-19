@@ -49,4 +49,37 @@ private:
 
 	UPROPERTY(VisibleAnywhere)
 	UCameraComponent* CameraComp;
+
+
+
+	// 시뮬레이션 테스트
+	/*
+	float GetAirResistance();
+	float GetFrictionResistance();
+
+	UPROPERTY(EditDefaultsOnly)
+	float DefaultMass;
+
+
+	UPROPERTY(EditDefaultsOnly)
+	float MovingFactor;
+
+	UPROPERTY(EditDefaultsOnly)
+	float DefaultMovingForce;
+
+	UPROPERTY(EditDefaultsOnly)
+	float RotationFactor;
+
+	UPROPERTY(EditDefaultsOnly)
+	float DefaultTurningRadius;
+
+	UPROPERTY(EditDefaultsOnly)
+	float DragCoefficient;
+
+	UPROPERTY(EditDefaultsOnly)
+	float FrictionCoefficient;
+
+	UPROPERTY(VisibleAnywhere)
+	float DefaultGravity;
+	*/
 };
