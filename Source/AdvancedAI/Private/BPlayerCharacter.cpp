@@ -40,7 +40,7 @@ ABPlayerCharacter::ABPlayerCharacter()
 	MovingFactor = 0.0f;
 	RotationFactor = 0.0f;
 
-	MinTurningRadius = 10.0f;
+	MinTurningRadius = 50.0f; // 50 cm
 }
 
 
@@ -53,26 +53,73 @@ void ABPlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	TargetYaw = GetActorRotation().Yaw;
 }
 
 void ABPlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
+	if (!MovingFactor && !RotationFactor)
+	{
+		return;
+	}
 	
-	const FVector CurrentVelocity = GetVelocity();
-	float DeltaLocation = FVector::DotProduct(GetOwner()->GetActorForwardVector(), CurrentVelocity) * DeltaSeconds;
-	float RotationAngle = DeltaLocation / MinTurningRadius * RotationFactor;
-	FQuat RotationDelta(GetOwner()->GetActorUpVector(), RotationAngle);
+	//B_LOG_DEV("%.1f, %.1f, %.1f", CurrentVelocity.X, CurrentVelocity.Y, CurrentVelocity.Z);
+	//B_LOG_DEV("Test : %.1f", RotationAngle);
+	
+	const FRotator ControlRot = GetControlRotation();
+	FRotator ActorRot = GetActorRotation();
+	float ActorYaw = ActorRot.Yaw;
+	if (0 > ActorYaw)
+	{
+		ActorYaw = 360 + ActorYaw;
+	}
 
-	//Velocity = RotationDelta.RotateVector(Velocity);
+	// 두 회전값의 Yaw가 차이가 있으면 보간해준다. 보간 시, 속도와 회전반경으로 계산한다.
+	const float RemainingYaw = ControlRot.Yaw - ActorYaw;
+	const float RemainingYawPositive = FMath::Abs<float>(RemainingYaw);
+	if (SMALL_NUMBER > RemainingYawPositive)
+	{
+		AddMovementInput(ActorRot.Vector(), MovingFactor);
+	}
+	else
+	{
+		B_LOG_DEV("=============================================================");
+		B_LOG_DEV("ControlRot.Yaw : %.1f", ControlRot.Yaw);
+		B_LOG_DEV("ActorRot.Yaw : % .1f", ActorRot.Yaw);
+		B_LOG_DEV("ActorYaw : % .1f", ActorYaw);
+		B_LOG_DEV("RemainingAngle : %.1f", RemainingYaw);
 
-	GetOwner()->AddActorWorldRotation(RotationDelta);
+		const FVector CurrentVelocity = GetVelocity();
+		float DeltaLocation = FVector::DotProduct(GetOwner()->GetActorForwardVector(), CurrentVelocity) * DeltaSeconds;
+		float DeltaYaw = DeltaLocation / MinTurningRadius;// *RotationFactor;
+		DeltaYaw = FMath::RadiansToDegrees<float>(DeltaYaw);
+		DeltaYaw = FMath::Abs<float>(DeltaYaw);
 
-	FRotator ControlRot = GetControlRotation();
-	ControlRot.Pitch = 0.0f;
-	ControlRot.Roll = 0.0f;
 
-	AddMovementInput(ControlRot.Vector(), MovingFactor);
+		B_LOG_DEV("DeltaYaw : %.1f", DeltaYaw);
+
+		float Ratio = 0.0f;
+
+		if (DeltaYaw > RemainingYawPositive)
+		{
+			Ratio = 1.0f;
+		}
+		else
+		{
+			Ratio = DeltaYaw / RemainingYawPositive;
+		}
+
+		// 최단 거리로 보간하기 위해 FQuat 보간을 사용한다.
+		FQuat NewQuat = FQuat::Slerp(ActorRot.Quaternion(), ControlRot.Quaternion(), Ratio);
+
+		FRotator NewRotator = NewQuat.Rotator();
+		NewRotator.Pitch = 0.0f;
+		NewRotator.Roll = 0.0f;
+		SetActorRotation(NewRotator);
+		AddMovementInput(NewRotator.Vector(), MovingFactor);
+	}
 }
 
 FVector ABPlayerCharacter::GetPawnViewLocation() const
@@ -89,6 +136,7 @@ void ABPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	PlayerInputComponent->BindAxis("MoveRight", this, &ABPlayerCharacter::MoveRight);
 
 	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
+	//PlayerInputComponent->BindAxis("Turn", this, &ABPlayerCharacter::AddControllerRotationInput);
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
@@ -106,4 +154,10 @@ void ABPlayerCharacter::MoveRight(float Value)
 	RotationFactor = Value;
 
 	//B_LOG_DEV("MoveRight");
+}
+
+
+void ABPlayerCharacter::AddControllerRotationInput(float Value)
+{
+	B_LOG_DEV("Test : %.1f", Value);
 }

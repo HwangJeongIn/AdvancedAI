@@ -30,15 +30,19 @@ private:
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 
+	void AddControllerRotationInput(float Value);
+
 	UPROPERTY(VisibleAnywhere)
 	USpringArmComponent* SpringArmComp;
 
 	UPROPERTY(VisibleAnywhere)
 	UCameraComponent* CameraComp;
 
-
 	float MovingFactor;
 	float RotationFactor;
 
+	UPROPERTY(EditDefaultsOnly)
 	float MinTurningRadius;
+
+	float TargetYaw;
 };
