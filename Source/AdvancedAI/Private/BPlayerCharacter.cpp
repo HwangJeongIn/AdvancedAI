@@ -11,6 +11,14 @@
 #include "Components/PrimitiveComponent.h"
 
 
+static int32 PrintPlayerMovementLog = 0;
+FAutoConsoleVariableRef CVARDebugTrackerBotDrawing(
+	TEXT("B.PrintPlayerMovementLog"),
+	PrintPlayerMovementLog,
+	TEXT("Print Player Movement Log"),
+	ECVF_Cheat);
+
+
 // Sets default values
 ABPlayerCharacter::ABPlayerCharacter()
 {
@@ -73,32 +81,33 @@ void ABPlayerCharacter::Tick(float DeltaSeconds)
 	float ActorYaw = ActorRot.Yaw;
 	if (0 > ActorYaw)
 	{
-		ActorYaw = 360 + ActorYaw;
+		ActorYaw = 360.0f + ActorYaw;
 	}
 
 	// 두 회전값의 Yaw가 차이가 있으면 보간해준다. 보간 시, 속도와 회전반경으로 계산한다.
 	const float RemainingYaw = ControlRot.Yaw - ActorYaw;
-	const float RemainingYawPositive = FMath::Abs<float>(RemainingYaw);
-	if (SMALL_NUMBER > RemainingYawPositive)
+	float RemainingYawPositive = FMath::Abs<float>(RemainingYaw);
+	if (180.0f < RemainingYawPositive)
+	{
+		RemainingYawPositive = 360.0f - RemainingYawPositive;
+	}
+
+	if (0.1f > RemainingYawPositive)
 	{
 		AddMovementInput(ActorRot.Vector(), MovingFactor);
+		if (PrintPlayerMovementLog)
+		{
+			B_LOG_DEV("=============================================================");
+		}
 	}
 	else
 	{
-		B_LOG_DEV("=============================================================");
-		B_LOG_DEV("ControlRot.Yaw : %.1f", ControlRot.Yaw);
-		B_LOG_DEV("ActorRot.Yaw : % .1f", ActorRot.Yaw);
-		B_LOG_DEV("ActorYaw : % .1f", ActorYaw);
-		B_LOG_DEV("RemainingAngle : %.1f", RemainingYaw);
 
 		const FVector CurrentVelocity = GetVelocity();
-		float DeltaLocation = FVector::DotProduct(GetOwner()->GetActorForwardVector(), CurrentVelocity) * DeltaSeconds;
+		
+		const float DeltaLocation = CurrentVelocity.Size() * DeltaSeconds;
 		float DeltaYaw = DeltaLocation / MinTurningRadius;// *RotationFactor;
 		DeltaYaw = FMath::RadiansToDegrees<float>(DeltaYaw);
-		DeltaYaw = FMath::Abs<float>(DeltaYaw);
-
-
-		B_LOG_DEV("DeltaYaw : %.1f", DeltaYaw);
 
 		float Ratio = 0.0f;
 
@@ -119,6 +128,17 @@ void ABPlayerCharacter::Tick(float DeltaSeconds)
 		NewRotator.Roll = 0.0f;
 		SetActorRotation(NewRotator);
 		AddMovementInput(NewRotator.Vector(), MovingFactor);
+
+		if (PrintPlayerMovementLog)
+		{
+			B_LOG_DEV("=============================================================");
+			B_LOG_DEV("ControlRot.Yaw : %.1f", ControlRot.Yaw);
+			B_LOG_DEV("ActorRot.Yaw : % .1f", ActorRot.Yaw);
+			B_LOG_DEV("ActorYaw : % .1f", ActorYaw);
+			B_LOG_DEV("RemainingAngle : %.1f", RemainingYaw);
+			B_LOG_DEV("DeltaYaw : %.1f", DeltaYaw);
+			B_LOG_DEV("Ratio : %.1f", Ratio);
+		}
 	}
 }
 
