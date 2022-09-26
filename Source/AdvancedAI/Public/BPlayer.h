@@ -11,6 +11,7 @@ class UCapsuleComponent;
 class USkeletalMeshComponent;
 class UCameraComponent;
 class USpringArmComponent;
+class UBPlayerMovementComponent;
 
 
 UCLASS()
@@ -28,16 +29,18 @@ protected:
 
 public:	
 	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+	//virtual void Tick(float DeltaTime) override;
 
-	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	float GetMovingFactor() const;
+	float GetRotationFactor() const;
+
+private:
 
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 
-private:
 	UPROPERTY(VisibleAnywhere)
 	UCapsuleComponent* CapsuleComp;
 
@@ -50,36 +53,9 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	UCameraComponent* CameraComp;
 
-
-
-	// 시뮬레이션 테스트
-	/*
-	float GetAirResistance();
-	float GetFrictionResistance();
-
-	UPROPERTY(EditDefaultsOnly)
-	float DefaultMass;
-
-
-	UPROPERTY(EditDefaultsOnly)
-	float MovingFactor;
-
-	UPROPERTY(EditDefaultsOnly)
-	float DefaultMovingForce;
-
-	UPROPERTY(EditDefaultsOnly)
-	float RotationFactor;
-
-	UPROPERTY(EditDefaultsOnly)
-	float DefaultTurningRadius;
-
-	UPROPERTY(EditDefaultsOnly)
-	float DragCoefficient;
-
-	UPROPERTY(EditDefaultsOnly)
-	float FrictionCoefficient;
-
 	UPROPERTY(VisibleAnywhere)
-	float DefaultGravity;
-	*/
+	UBPlayerMovementComponent* PlayerMovementComp;
+
+	float MovingFactor;
+	float RotationFactor;
 };

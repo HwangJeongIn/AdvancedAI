@@ -12,7 +12,7 @@
 
 
 static int32 PrintPlayerMovementLog = 0;
-FAutoConsoleVariableRef CVARDebugTrackerBotDrawing(
+FAutoConsoleVariableRef CVARDebugPrintPlayerMovement(
 	TEXT("B.PrintPlayerMovementLog"),
 	PrintPlayerMovementLog,
 	TEXT("Print Player Movement Log"),
@@ -38,6 +38,7 @@ ABPlayerCharacter::ABPlayerCharacter()
 
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	bUseControllerRotationYaw = false;
+
 
 	// Enabled on mesh to react to incoming projectiles
 	GetMesh()->SetGenerateOverlapEvents(true);
