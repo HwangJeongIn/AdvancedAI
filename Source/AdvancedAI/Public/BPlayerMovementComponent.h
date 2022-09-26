@@ -21,11 +21,16 @@ protected:
 public:	
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
+	void UpdateTransform(FVector& CurrentVelocity, float DeltaTime);
+	void UpdateRotation(float DeltaTranslationScalar, float DeltaTime);
+	void ApplyRotationToVelo
+	void UpdateLocation(float DeltaTranslationScalar);
 
-	float GetAirResistance();
-	float GetFrictionResistance(const FVector& currentVelocity);
+	float GetDeltaTranslationScalar(const FVector& CurrentVelocity, float DeltaTime) const;
+	float GetAirResistanceScalar(const FVector& CurrentVelocity) const;
+	float GetFrictionResistanceScalar() const;
 
-
+	
 	/* cm/s */
 	UPROPERTY(VisibleAnywhere)
 	FVector Velocity;

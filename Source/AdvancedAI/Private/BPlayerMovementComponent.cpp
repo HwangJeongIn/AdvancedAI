@@ -52,9 +52,17 @@ void UBPlayerMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 		return;
 	}
 
-	FRotator ControlRot = OwnerPlayer->GetControlRotation();
-	ControlRot.Pitch = 0.0f;
-	ControlRot.Roll = 0.0f;
+
+	const float DeltaTranslationScalar = GetDeltaTranslationScalar(Velocity, DeltaTime);
+	UpdateRotation(DeltaTranslationScalar, DeltaTime);
+
+
+
+	ABPlayer* OwnerPlayer = Cast<ABPlayer>(GetOwner());
+	if (!OwnerPlayer)
+	{
+		return;
+	}
 
 	const FVector PlayerForwardDirection = ControlRot.Vector();
 
@@ -71,7 +79,7 @@ void UBPlayerMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	FVector Acceleration = PlayerForwardDirection * CurrentForceScalar / DefaultMass;
 	Velocity = Velocity + Acceleration * DeltaTime;
 
-
+	UpdateTransform(Velocity, DeltaTime);
 	
 	/*
 	UPrimitiveComponent* RootComp = Cast<UPrimitiveComponent>(RootComponent);
@@ -95,13 +103,31 @@ void UBPlayerMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 
 }
 
-void UBPlayerMovementComponent::UpdateRotation()
+void UBPlayerMovementComponent::UpdateTransform(FVector& CurrentVelocity, float DeltaTime)
 {
-	const float DeltaTime = 3.0f;
 
 
-	//=================================================================================
+}
 
+
+void UBPlayerMovementComponent::UpdateLocation(float DeltaTranslationScalar)
+{
+	ABPlayer* OwnerPlayer = Cast<ABPlayer>(GetOwner());
+
+	const FRotator ActorRot = OwnerPlayer->GetActorRotation();
+	FHitResult Hit;
+	OwnerPlayer->AddActorWorldOffset(DeltaTranslationScalar * ActorRot.Vector(), true, &Hit);
+
+	/*
+	if (Hit.IsValidBlockingHit())
+	{
+		Velocity = FVector::ZeroVector;
+	}
+	*/
+}
+
+void UBPlayerMovementComponent::UpdateRotation(float DeltaTranslationScalar, float DeltaTime)
+{
 	ABPlayer* OwnerPlayer = Cast<ABPlayer>(GetOwner());
 	/*
 		ActorRotation은 Quaternion으로 되어있고, Rotator로 변환할 때, Yaw는 Atan2함수를 사용하여 변환한다.
@@ -110,89 +136,100 @@ void UBPlayerMovementComponent::UpdateRotation()
 		ControlRotation은 [0, 360]의 범위를 가진다.
 	*/
 
-	const FRotator ControlRot = OwnerPlayer->GetControlRotation();
-	float TargetYaw = ControlRot.Yaw;
-	if (180.0f < TargetYaw)
-	{
-		TargetYaw = TargetYaw - 360.0f;
-	}
-
 	FRotator ActorRot = OwnerPlayer->GetActorRotation();
-	float  = ActorRot.Yaw;
-	if (0 > ActorYaw)
+	// 회전 업데이트
 	{
-		ActorYaw = 360.0f + ActorYaw;
-	}
 
-	// 두 회전값의 Yaw가 차이가 있으면 보간해준다. 보간 시, 속도와 회전반경으로 계산한다.
-	const float RemainingYaw = ControlRot.Yaw - ActorYaw;
-	float RemainingYawPositive = FMath::Abs<float>(RemainingYaw);
-	if (180.0f < RemainingYawPositive)
-	{
-		RemainingYawPositive = 360.0f - RemainingYawPositive;
-	}
+		const float CurrentYaw = ActorRot.Yaw;
 
-	if (0.1f > RemainingYawPositive)
-	{
-		return;
-	}
+		const FRotator ControlRot = OwnerPlayer->GetControlRotation();
+		float TargetYaw = ControlRot.Yaw;
+		if (180.0f < TargetYaw)
+		{
+			TargetYaw = TargetYaw - 360.0f;
+		}
 
-	const float DeltaTranslationScalar = Velocity.Size() * DeltaTime;
-	// 각도(θ) * 반지름(r) = 호의 길이(l)
-	float DeltaYaw = DeltaTranslationScalar / MinTurningRadius;// *RotationFactor;
-	DeltaYaw = FMath::RadiansToDegrees<float>(DeltaYaw);
 
-	float Ratio = 0.0f;
+		// 두 회전값의 Yaw가 차이가 있으면 보간해준다. 보간 시, 속도와 회전반경으로 계산한다.
 
-	if (DeltaYaw > RemainingYawPositive)
-	{
-		Ratio = 1.0f;
-	}
-	else
-	{
-		Ratio = DeltaYaw / RemainingYawPositive;
-	}
+		float RemainingYaw = TargetYaw - CurrentYaw;
+		float YawFactor = (RemainingYaw < 0) ? -1 : 1;
+		float RemainingYawPositive = FMath::Abs<float>(RemainingYaw);
+		if (180.0f < RemainingYawPositive)
+		{
+			RemainingYawPositive = 360.0f - RemainingYawPositive;
+		}
 
-	// 최단 거리로 보간하기 위해 FQuat 보간을 사용한다.
-	FQuat NewQuat = FQuat::Slerp(ActorRot.Quaternion(), ControlRot.Quaternion(), Ratio);
+		if (0.1f < RemainingYawPositive)
+		{
+			RemainingYaw = RemainingYawPositive * (-YawFactor);
+			if (0 < RemainingYaw)
+			{
+			}
+			else
+			{
+				RemainingYaw = -RemainingYawPositive;
+			}
 
-	FRotator NewRotator = NewQuat.Rotator();
-	NewRotator.Pitch = 0.0f;
-	NewRotator.Roll = 0.0f;
-	OwnerPlayer->SetActorRotation(NewRotator);
+			// 각도(θ) * 반지름(r) = 호의 길이(l)
+			float DeltaYaw = DeltaTranslationScalar / MinTurningRadius;// *RotationFactor;
+			DeltaYaw = FMath::RadiansToDegrees<float>(DeltaYaw);
 
-	AddMovementInput(NewRotator.Vector(), MovingFactor);
+			ActorRot.Yaw += DeltaYaw * (-YawFactor);
+			ActorRot.Pitch = 0.0f;
+			ActorRot.Roll = 0.0f;
+			OwnerPlayer->SetActorRotation(ActorRot);
 
-	// 위치 업데이트
-	const FVector DeltaTranslation = Velocity * DeltaTime;
-	FHitResult Hit;
-	OwnerPlayer->AddActorWorldOffset(DeltaTranslation, true, &Hit);
+			/*
+			float Ratio = 0.0f;
 
-	if (Hit.IsValidBlockingHit())
-	{
-		Velocity = FVector::ZeroVector;
-	}
+			if (DeltaYaw > RemainingYawPositive)
+			{
+				Ratio = 1.0f;
+			}
+			else
+			{
+				Ratio = DeltaYaw / RemainingYawPositive;
+			}
 
-	if (PrintPlayerMovementComponent)
-	{
-		B_LOG_DEV("=============================================================");
-		B_LOG_DEV("ControlRot.Yaw : %.1f", ControlRot.Yaw);
-		B_LOG_DEV("ActorRot.Yaw : % .1f", ActorRot.Yaw);
-		B_LOG_DEV("ActorYaw : % .1f", ActorYaw);
-		B_LOG_DEV("RemainingAngle : %.1f", RemainingYaw);
-		B_LOG_DEV("DeltaYaw : %.1f", DeltaYaw);
-		B_LOG_DEV("Ratio : %.1f", Ratio);
+			// 최단 거리로 보간하기 위해 FQuat 보간을 사용한다.
+			FQuat NewQuat = FQuat::Slerp(ActorRot.Quaternion(), ControlRot.Quaternion(), Ratio);
+
+			FRotator NewRotator = NewQuat.Rotator();
+			NewRotator.Pitch = 0.0f;
+			NewRotator.Roll = 0.0f;
+			OwnerPlayer->SetActorRotation(NewRotator);
+			AddMovementInput(NewRotator.Vector(), MovingFactor);
+			*/
+
+
+			if (PrintPlayerMovementComponent)
+			{
+				B_LOG_DEV("=============================================================");
+				B_LOG_DEV("ControlRot.Yaw : %.1f", ControlRot.Yaw);
+				B_LOG_DEV("ActorRot.Yaw : % .1f", ActorRot.Yaw);
+				//B_LOG_DEV("ActorYaw : % .1f", ActorYaw);
+				B_LOG_DEV("RemainingAngle : %.1f", RemainingYaw);
+				B_LOG_DEV("DeltaYaw : %.1f", DeltaYaw);
+				//B_LOG_DEV("Ratio : %.1f", Ratio);
+			}
+		}
 	}
 }
 
-// 시뮬레이션 테스트
-float UBPlayerMovementComponent::GetAirResistanceScalar(const FVector& CurrentVelocity)
+
+float UBPlayerMovementComponent::GetDeltaTranslationScalar(const FVector& CurrentVelocity, float DeltaTime) const
+{
+	return CurrentVelocity.Size() * DeltaTime;
+}
+
+float UBPlayerMovementComponent::GetAirResistanceScalar(const FVector& CurrentVelocity) const
 {	
 	// 공기 저항 = (속도와 반대 방향) * 속도^2 * 항력계수
 	return CurrentVelocity.SizeSquared() * DragCoefficient;
 }
 
-float UBPlayerMovementComponent::GetFrictionResistanceScalar()
+float UBPlayerMovementComponent::GetFrictionResistanceScalar() const
 {
 	// 마찰력 = (속도와 반대 방향) * 수직항력 * 마찰계수 // 수직항력의 경우 지면을 수평으로 간주하고 계산한다. (M * G)
 	const float NormalForce = DefaultMass * DefaultGravity;
