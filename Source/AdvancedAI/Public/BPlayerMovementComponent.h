@@ -21,10 +21,9 @@ protected:
 public:	
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	void UpdateTransform(FVector& CurrentVelocity, float DeltaTime);
-	void UpdateRotation(float DeltaTranslationScalar, float DeltaTime);
-	void ApplyRotationToVelo
-	void UpdateLocation(float DeltaTranslationScalar);
+	void UpdateTransform(float MovingFactor, float RightMovementFactor, float DeltaTime);
+	void UpdateRotation(float DeltaTranslationScalar);
+	void UpdateLocation(float MovingFactor, float RightMovementFactor, float DeltaTranslationScalar);
 
 	float GetDeltaTranslationScalar(const FVector& CurrentVelocity, float DeltaTime) const;
 	float GetAirResistanceScalar(const FVector& CurrentVelocity) const;

@@ -33,8 +33,8 @@ public:
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	float GetMovingFactor() const;
-	float GetRotationFactor() const;
+	float GetForwardMovementFactor() const;
+	float GetRightMovementFactor() const;
 
 private:
 
@@ -56,6 +56,6 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	UBPlayerMovementComponent* PlayerMovementComp;
 
-	float MovingFactor;
-	float RotationFactor;
+	float ForwardMovementFactor;
+	float RightMovementFactor;
 };

@@ -61,8 +61,8 @@ ABPlayer::ABPlayer()
 	PlayerMovementComp = CreateDefaultSubobject<UBPlayerMovementComponent>("PlayerMovementComp");
 
 	// 시뮬레이션 테스트
-	MovingFactor = 0.0f;
-	RotationFactor = 0.0f;
+	ForwardMovementFactor = 0.0f;
+	RightMovementFactor = 0.0f;
 }
 
 // Called when the game starts or when spawned
@@ -87,19 +87,19 @@ void ABPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	PlayerInputComponent->BindAxis("MoveRight", this, &ABPlayer::MoveRight);
 }
 
-float ABPlayer::GetMovingFactor() const
+float ABPlayer::GetForwardMovementFactor() const
 {
-	return MovingFactor;
+	return ForwardMovementFactor;
 }
 
-float ABPlayer::GetRotationFactor() const
+float ABPlayer::GetRightMovementFactor() const
 {
-	return RotationFactor;
+	return RightMovementFactor;
 }
 
 void ABPlayer::MoveForward(float Value)
 {
-	RotationFactor = Value;
+	RightMovementFactor = Value;
 
 	/*
 	FRotator ControlRot = GetControlRotation();
@@ -112,7 +112,7 @@ void ABPlayer::MoveForward(float Value)
 
 void ABPlayer::MoveRight(float Value)
 {
-	MovingFactor = Value;
+	ForwardMovementFactor = Value;
 
 	/*
 	FRotator ControlRot = GetControlRotation();
