@@ -105,7 +105,13 @@ void UBPlayerMovementComponent::UpdateLocation(float ForwardMovementFactor, floa
 
 	const FRotator ActorRot = OwnerPlayer->GetActorRotation();
 	FHitResult Hit;
-	OwnerPlayer->AddActorWorldOffset(DeltaTranslationScalar * ActorRot.Vector(), true, &Hit);
+
+	FVector ForwardVector = ActorRot.Vector();
+	FVector RightVector = FRotationMatrix(ActorRot).GetScaledAxis(EAxis::Y);
+
+	FVector FinalDirection = ForwardVector * ForwardMovementFactor + RightVector * RightMovementFactor;
+	FinalDirection.Normalize();
+	OwnerPlayer->AddActorWorldOffset(FinalDirection * DeltaTranslationScalar, true, &Hit);
 
 	/*
 	if (Hit.IsValidBlockingHit())
@@ -128,7 +134,6 @@ void UBPlayerMovementComponent::UpdateRotation(float DeltaTranslationScalar)
 	FRotator ActorRot = OwnerPlayer->GetActorRotation();
 	// 회전 업데이트
 	{
-
 		const float CurrentYaw = ActorRot.Yaw;
 
 		const FRotator ControlRot = OwnerPlayer->GetControlRotation();
@@ -137,9 +142,6 @@ void UBPlayerMovementComponent::UpdateRotation(float DeltaTranslationScalar)
 		{
 			TargetYaw = TargetYaw - 360.0f;
 		}
-
-
-		// 두 회전값의 Yaw가 차이가 있으면 보간해준다. 보간 시, 속도와 회전반경으로 계산한다.
 
 		float RemainingYaw = TargetYaw - CurrentYaw;
 		float YawFactor = (RemainingYaw < 0) ? -1 : 1;
