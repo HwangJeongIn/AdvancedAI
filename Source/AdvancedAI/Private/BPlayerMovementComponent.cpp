@@ -20,10 +20,9 @@ UBPlayerMovementComponent::UBPlayerMovementComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 
 
-	Velocity = FVector::ZeroVector;
 
 	DefaultMass = 100;			// 100kg
-	DefaultMovingForce = 10000; // 10000(㎏ × (cm/s^2))
+	DefaultMovingForceScalar = 10000; // 10000(㎏ × (cm/s^2))
 	MinTurningRadius = 50;		// 50 cm
 
 	DragCoefficient = 16;
@@ -36,10 +35,13 @@ void UBPlayerMovementComponent::BeginPlay()
 
 	// 시뮬레이션 테스트
 	// 중력이 중간에 변한다면 실시간으로 계산해야한다.
-	
+
 	// m / s^2으로 나오기 때문에 cm / s^2로 변환
-	DefaultGravity = GetOwner()->GetWorld()->GetGravityZ() * 100;
+	DefaultGravity = GetOwner()->GetWorld()->GetGravityZ();
 	//DefaultMass = GetCharacterMovement()->Mass;
+
+	DefaultAccelerationScalar = DefaultMovingForceScalar / DefaultMass;
+	Velocity = FVector::ZeroVector;
 }
 
 void UBPlayerMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -52,82 +54,81 @@ void UBPlayerMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 		return;
 	}
 
-	const FVector PlayerForwardDirection = ControlRot.Vector();
-
 	const float ForwardMovementFactor = OwnerPlayer->GetForwardMovementFactor();
 	const float RightMovementFactor = OwnerPlayer->GetRightMovementFactor();
 
-	float CurrentForceScalar = DefaultMovingForce * ForwardMovementFactor;
-	const float CurrentResistanceScalar = GetAirResistanceScalar(Velocity) + GetFrictionResistanceScalar();
+	if (PrintPlayerMovementComponent)
+	{
+		B_LOG_DEV("%.1f, %.1f", ForwardMovementFactor, RightMovementFactor);
+	}
 
-	CurrentForceScalar -= CurrentResistanceScalar;
-
-	// F = ma => a = F / m
-	FVector Acceleration = PlayerForwardDirection * CurrentForceScalar / DefaultMass;
-	Velocity = Velocity + Acceleration * DeltaTime;
-
+	UpdateVelocity(ForwardMovementFactor, RightMovementFactor, DeltaTime);
 	UpdateTransform(ForwardMovementFactor, RightMovementFactor, DeltaTime);
+}
 
-	
-	/*
-	UPrimitiveComponent* RootComp = Cast<UPrimitiveComponent>(RootComponent);
-	if (RootComp)
+float UBPlayerMovementComponent::GetDeltaTranslationScalar(const FVector& CurrentVelocity, float DeltaTime) const
+{
+	return CurrentVelocity.Size() * DeltaTime;
+}
+
+float UBPlayerMovementComponent::GetAirResistanceScalar(const FVector& CurrentVelocity) const
+{
+	// 공기 저항 = (속도와 반대 방향) * 속도^2 * 항력계수
+	return CurrentVelocity.SizeSquared() * DragCoefficient;
+}
+
+float UBPlayerMovementComponent::GetFrictionResistanceScalar(const FVector& CurrentVelocity) const
+{
+	// 마찰력 = (속도와 반대 방향) * 수직항력 * 마찰계수 // 수직항력의 경우 지면을 수평으로 간주하고 계산한다. (M * G)
+	const float NormalForce = DefaultMass * DefaultGravity;
+	return CurrentVelocity.GetSafeNormal().Size() * FrictionCoefficient * NormalForce;
+}
+
+void UBPlayerMovementComponent::UpdateVelocity(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime)
+{
+	/** 입력 계산 */
+	if (ForwardMovementFactor || RightMovementFactor)
 	{
-		B_LOG_DEV("%.1f, %.1f, %.1f", FinalVelocity.X, FinalVelocity.Y, FinalVelocity.Z);
-		RootComp->SetPhysicsLinearVelocity(FinalVelocity);
+		const FVector RelativeDirection(ForwardMovementFactor, RightMovementFactor, 0.0f);
+
+		const FQuat RelativeDirectionRotation = RelativeDirection.ToOrientationQuat();
+		const FQuat VelocityRotation = Velocity.ToOrientationQuat();
+
+		const FQuat WorldDirectionRotation = RelativeDirectionRotation * VelocityRotation.Inverse();
+		const FVector WorldAcceleration = WorldDirectionRotation.Vector() * DefaultAccelerationScalar;
+
+		//FQuat AQuat = FQuat(RotA);
+		//FQuat BQuat = FQuat(RotB);
+		//return FRotator(BQuat * AQuat);
+		Velocity = Velocity + (WorldAcceleration * DeltaTime);
+
+		if (PrintPlayerMovementComponent)
+		{
+			B_LOG_DEV("Updated Velocity : %.1f, %.1f, %.1f", Velocity.X, Velocity.Y, Velocity.Z);
+		}
 	}
 
-	//B_LOG_DEV("%.1f, %.1f, %.1f", finalMovingForce.X, finalMovingForce.Y, finalMovingForce.Z);
-	//GetCharacterMovement()->AddForce(finalMovingForce);
-	*/
-	if (!ForwardMovementFactor && !RightMovementFactor)
-	{
-		return;
-	}
 
-	//B_LOG_DEV("%.1f, %.1f, %.1f", CurrentVelocity.X, CurrentVelocity.Y, CurrentVelocity.Z);
-	//B_LOG_DEV("Test : %.1f", RotationAngle);
-
-
+	/** 마찰력, 공기저항 계산 */
+	const float CurrentResistanceScalar = GetAirResistanceScalar(Velocity) + GetFrictionResistanceScalar(Velocity);
+	// F = ma => a = F / m
+	const float ResistanceAcceleration = CurrentResistanceScalar / DefaultMass;
+	Velocity = Velocity * (1.0f + CurrentResistanceScalar * DeltaTime);
 }
 
 void UBPlayerMovementComponent::UpdateTransform(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime)
 {
 	const float DeltaTranslationScalar = GetDeltaTranslationScalar(Velocity, DeltaTime);
 	UpdateRotation(DeltaTranslationScalar);
-	UpdateLocation(ForwardMovementFactor, RightMovementFactor, DeltaTime);
-}
-
-
-void UBPlayerMovementComponent::UpdateLocation(float ForwardMovementFactor, float RightMovementFactor, float DeltaTranslationScalar)
-{
-	ABPlayer* OwnerPlayer = Cast<ABPlayer>(GetOwner());
-
-	const FRotator ActorRot = OwnerPlayer->GetActorRotation();
-	FHitResult Hit;
-
-	FVector ForwardVector = ActorRot.Vector();
-	FVector RightVector = FRotationMatrix(ActorRot).GetScaledAxis(EAxis::Y);
-
-	FVector FinalDirection = ForwardVector * ForwardMovementFactor + RightVector * RightMovementFactor;
-	FinalDirection.Normalize();
-	OwnerPlayer->AddActorWorldOffset(FinalDirection * DeltaTranslationScalar, true, &Hit);
-
-	/*
-	if (Hit.IsValidBlockingHit())
-	{
-		Velocity = FVector::ZeroVector;
-	}
-	*/
+	UpdateLocation(DeltaTranslationScalar);
 }
 
 void UBPlayerMovementComponent::UpdateRotation(float DeltaTranslationScalar)
 {
-	/*
-	* ActorRotation은 Quaternion으로 되어있고, Rotator로 변환할 때, Yaw는 Atan2함수를 사용하여 변환한다.
-	* 따라서 ActionRotation은 [-180, 180]까지의 범위를 가진다.
-	* ControlRotation은 [0, 360]의 범위를 가진다.
-	*/
+	/**
+	 * ActorRotation은 Quaternion으로 되어있고, Rotator로 변환할 때, Yaw는 Atan2함수를 사용하여 변환한다.
+	 * 따라서 ActionRotation은 [-180, 180]까지의 범위를 가진다.
+	 * ControlRotation은 [0, 360]의 범위를 가진다. */
 
 	ABPlayer* OwnerPlayer = Cast<ABPlayer>(GetOwner());
 
@@ -167,9 +168,11 @@ void UBPlayerMovementComponent::UpdateRotation(float DeltaTranslationScalar)
 
 			Velocity = DeltaRotation.RotateVector(Velocity);
 
+
 			if (PrintPlayerMovementComponent)
 			{
 				B_LOG_DEV("=============================================================");
+				B_LOG_DEV("Velocity Applied Rotation : %.1f, %.1f, %.1f", Velocity.X, Velocity.Y, Velocity.Z);
 				B_LOG_DEV("ControlRot.Yaw : %.1f", ControlRot.Yaw);
 				B_LOG_DEV("ActorRot.Yaw : % .1f", ActorRot.Yaw);
 				//B_LOG_DEV("ActorYaw : % .1f", ActorYaw);
@@ -181,22 +184,29 @@ void UBPlayerMovementComponent::UpdateRotation(float DeltaTranslationScalar)
 	}
 }
 
-
-float UBPlayerMovementComponent::GetDeltaTranslationScalar(const FVector& CurrentVelocity, float DeltaTime) const
+void UBPlayerMovementComponent::UpdateLocation(float DeltaTranslationScalar)
 {
-	return CurrentVelocity.Size() * DeltaTime;
-}
+	ABPlayer* OwnerPlayer = Cast<ABPlayer>(GetOwner());
 
-float UBPlayerMovementComponent::GetAirResistanceScalar(const FVector& CurrentVelocity) const
-{	
-	// 공기 저항 = (속도와 반대 방향) * 속도^2 * 항력계수
-	return CurrentVelocity.SizeSquared() * DragCoefficient;
-}
+	FHitResult Hit;
+	OwnerPlayer->AddActorWorldOffset(Velocity.GetSafeNormal() * DeltaTranslationScalar, true, &Hit);
 
-float UBPlayerMovementComponent::GetFrictionResistanceScalar() const
-{
-	// 마찰력 = (속도와 반대 방향) * 수직항력 * 마찰계수 // 수직항력의 경우 지면을 수평으로 간주하고 계산한다. (M * G)
-	const float NormalForce = DefaultMass * DefaultGravity;
-	return FrictionCoefficient * NormalForce;
+	/*
+	if (Hit.IsValidBlockingHit())
+	{
+		Velocity = FVector::ZeroVector;
+	}
+	*/
+
+	// 입력을 바로 반영할 때 사용
+	/*
+	const FRotator ActorRot = OwnerPlayer->GetActorRotation();
+
+	FVector ForwardVector = ActorRot.Vector();
+	FVector RightVector = FRotationMatrix(ActorRot).GetScaledAxis(EAxis::Y);
+
+	FVector FinalDirection = ForwardVector * ForwardMovementFactor + RightVector * RightMovementFactor;
+	FinalDirection.Normalize();
+	*/
 }
 

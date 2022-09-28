@@ -7,54 +7,61 @@
 #include "BPlayerMovementComponent.generated.h"
 
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class ADVANCEDAI_API UBPlayerMovementComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
-public:	
+public:
 	UBPlayerMovementComponent();
 
 protected:
 	virtual void BeginPlay() override;
 
-public:	
+public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
-	void UpdateTransform(float MovingFactor, float RightMovementFactor, float DeltaTime);
-	void UpdateRotation(float DeltaTranslationScalar);
-	void UpdateLocation(float MovingFactor, float RightMovementFactor, float DeltaTranslationScalar);
 
 	float GetDeltaTranslationScalar(const FVector& CurrentVelocity, float DeltaTime) const;
 	float GetAirResistanceScalar(const FVector& CurrentVelocity) const;
 	float GetFrictionResistanceScalar() const;
 
-	
-	/* cm/s */
+private:
+
+	void UpdateVelocity(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime);
+
+	void UpdateTransform(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime);
+	void UpdateRotation(float DeltaTranslationScalar);
+	void UpdateLocation(float DeltaTranslationScalar);
+
+	/** cm/s */
 	UPROPERTY(VisibleAnywhere)
-	FVector Velocity;
+		FVector Velocity;
 
-	/* kg */
+	/** kg */
 	UPROPERTY(EditDefaultsOnly)
-	float DefaultMass;
+		float DefaultMass;
 
-	// N = §¸ ¡¿ (m/s^2)
-	/* cN = §¸ ¡¿ (cm/s^2) */
+	/**
+	 * N = §¸ ¡¿ (m/s^2)
+	 * cN = §¸ ¡¿ (cm/s^2) */
 	UPROPERTY(EditDefaultsOnly)
-	float DefaultMovingForce;
-
-	/* cm */
-	UPROPERTY(EditDefaultsOnly)
-	float MinTurningRadius;
+		float DefaultMovingForceScalar;
 
 	UPROPERTY(EditDefaultsOnly)
-	float DragCoefficient;
+		float DefaultAccelerationScalar;
+
+	/** cm */
+	UPROPERTY(EditDefaultsOnly)
+		float MinTurningRadius;
 
 	UPROPERTY(EditDefaultsOnly)
-	float FrictionCoefficient;
+		float DragCoefficient;
 
-	/* cm/s^2 */
+	UPROPERTY(EditDefaultsOnly)
+		float FrictionCoefficient;
+
+	/** cm/s^2 */
 	UPROPERTY(VisibleAnywhere)
-	float DefaultGravity;
-		
+		float DefaultGravity;
+
 };
