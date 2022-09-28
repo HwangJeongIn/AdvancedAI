@@ -32,9 +32,12 @@ private:
 	void ApplyInputToVelocity(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime);
 
 
+	float ConvertToControlRotationRange(float angle) const;
 	void UpdateTransform(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime);
 	void UpdateRotation(float DeltaTranslationScalar);
 	void UpdateLocation(float DeltaTranslationScalar);
+
+	// 속도 관련 계산 ======================================================================================
 
 	/** cm/s */
 	UPROPERTY(VisibleAnywhere)
@@ -53,10 +56,6 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	float DefaultAccelerationScalar;
 
-	/** cm */
-	UPROPERTY(EditDefaultsOnly)
-	float MinTurningRadius;
-
 	UPROPERTY(EditDefaultsOnly)
 	float DragCoefficient;
 
@@ -66,4 +65,15 @@ private:
 	/** cm/s^2 */
 	UPROPERTY(VisibleAnywhere)
 	float DefaultGravityScalar;
+
+	// 회전 관련 계산 ======================================================================================
+
+	/** cm */
+	UPROPERTY(EditDefaultsOnly)
+	float MinTurningRadius;
+
+	UPROPERTY(VisibleAnywhere)
+	float CurrentYaw;
+
+
 };

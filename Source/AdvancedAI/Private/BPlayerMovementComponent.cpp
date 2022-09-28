@@ -5,11 +5,18 @@
 #include "Engine/World.h"
 #include "BPlayer.h"	
 
-static int32 PrintPlayerMovementComponent = 0;
-FAutoConsoleVariableRef CVARDebugPrintPlayerMovementComponent(
-	TEXT("B.PrintPlayerMovementComponent"),
-	PrintPlayerMovementComponent,
-	TEXT("Print Player Movement Log"),
+static int32 PrintPlayerMovementComponentVelocity = 1;
+FAutoConsoleVariableRef CVARDebugPrintPlayerMovementComponentVelocity(
+	TEXT("B.PrintPlayerMovementComponentVelocity"),
+	PrintPlayerMovementComponentVelocity,
+	TEXT("Print Player Movement Velocity Log"),
+	ECVF_Cheat);
+
+static int32 PrintPlayerMovementComponentRotation = 1;
+FAutoConsoleVariableRef CVARDebugPrintPlayerMovementComponentRotation(
+	TEXT("B.PrintPlayerMovementComponentRotation"),
+	PrintPlayerMovementComponentRotation,
+	TEXT("Print Player Movement Rotation Log"),
 	ECVF_Cheat);
 
 
@@ -64,7 +71,7 @@ void UBPlayerMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	const float ForwardMovementFactor = OwnerPlayer->GetForwardMovementFactor();
 	const float RightMovementFactor = OwnerPlayer->GetRightMovementFactor();
 
-	if (PrintPlayerMovementComponent)
+	if (PrintPlayerMovementComponentVelocity)
 	{
 		B_LOG_DEV("%.1f, %.1f", ForwardMovementFactor, RightMovementFactor);
 	}
@@ -96,7 +103,7 @@ void UBPlayerMovementComponent::UpdateVelocity(float ForwardMovementFactor, floa
 	ApplyResistanceToVelocity(DeltaTime);
 	ApplyInputToVelocity(ForwardMovementFactor, RightMovementFactor, DeltaTime);
 
-	if (PrintPlayerMovementComponent)
+	if (PrintPlayerMovementComponentVelocity)
 	{
 		B_LOG_DEV("Final Velocity : %.1f, %.1f, %.1f", Velocity.X, Velocity.Y, Velocity.Z);
 	}
@@ -131,7 +138,7 @@ void UBPlayerMovementComponent::ApplyResistanceToVelocity(float DeltaTime)
 		const FVector ResistanceDeltaVelocity = Velocity.GetSafeNormal() * (ResistanceAccelerationScalar * DeltaTime);
 		Velocity -= ResistanceDeltaVelocity;
 
-		if (PrintPlayerMovementComponent)
+		if (PrintPlayerMovementComponentVelocity)
 		{
 			B_LOG_DEV("ResistanceAccelerationScalar : %.1f, %.1f, %.1f", ResistanceAccelerationScalar);
 		}
@@ -169,11 +176,28 @@ void UBPlayerMovementComponent::ApplyInputToVelocity(float ForwardMovementFactor
 	const FQuat InputWorldDirectionRotation = InputRelativeDirectionRotation * (-VelocityRotation);
 	// DefaultAccelerationScalar = DefaultMovingForceScalar / DefaultMass
 	*/
-	if (PrintPlayerMovementComponent)
+	if (PrintPlayerMovementComponentVelocity)
 	{
 		B_LOG_DEV("InputWorldDirection : %.1f, %.1f, %.1f", InputWorldDirection.X, InputWorldDirection.Y, InputWorldDirection.Z);
 		B_LOG_DEV("InputAcceleration : %.1f, %.1f, %.1f", InputAcceleration.X, InputAcceleration.Y, InputAcceleration.Z);
 	}
+}
+
+float UBPlayerMovementComponent::ConvertToControlRotationRange(float angle) const
+{
+	// 정밀도를 소수점 2자리까지 보장한다.
+	static const int AngleFactor = 100;
+	static const int MaxAngle = 360 * AngleFactor;
+
+	int intAngle = angle * AngleFactor;
+	intAngle %= MaxAngle;
+
+	if (0.0f > angle)
+	{
+		angle += MaxAngle;
+	}
+
+	return ((float)intAngle / AngleFactor);
 }
 
 void UBPlayerMovementComponent::UpdateTransform(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime)
@@ -201,10 +225,6 @@ void UBPlayerMovementComponent::UpdateRotation(float DeltaTranslationScalar)
 
 	const FRotator ControlRot = OwnerPlayer->GetControlRotation();
 	float TargetYaw = ControlRot.Yaw;
-	if (180.0f < TargetYaw)
-	{
-		TargetYaw = TargetYaw - 360.0f;
-	}
 
 	float RemainingYaw = TargetYaw - CurrentYaw;
 	float YawFactor = (RemainingYaw < 0) ? -1 : 1;
@@ -212,34 +232,38 @@ void UBPlayerMovementComponent::UpdateRotation(float DeltaTranslationScalar)
 	if (180.0f < RemainingYawPositive)
 	{
 		RemainingYawPositive = 360.0f - RemainingYawPositive;
+		YawFactor *= -1;
+
+		RemainingYaw = RemainingYawPositive * YawFactor;
 	}
 
 	if (0.1f < RemainingYawPositive)
 	{
-		RemainingYaw = RemainingYawPositive * (-YawFactor);
-
 		// 각도(θ) * 반지름(r) = 호의 길이(l)
-		float DeltaYaw = DeltaTranslationScalar / MinTurningRadius; // *RightMovementFactor;
-		DeltaYaw = FMath::RadiansToDegrees<float>(DeltaYaw) * (-YawFactor);
+		float DeltaYawPositive = FMath::RadiansToDegrees<float>(DeltaTranslationScalar / MinTurningRadius);
+		if (DeltaYawPositive > RemainingYawPositive)
+		{
+			DeltaYawPositive = RemainingYawPositive;
+		}
+
+		const float DeltaYaw = DeltaYawPositive * YawFactor;
+		CurrentYaw += DeltaYaw;
+		CurrentYaw = ConvertToControlRotationRange(CurrentYaw);
+
+		OwnerPlayer->SetActorRotation(FRotator(0.0f, CurrentYaw, 0.0f));
 		const FRotator DeltaRotation(0.0f, DeltaYaw, 0.0f);
-
-		ActorRot += DeltaRotation;
-		ActorRot.Pitch = 0.0f;
-		ActorRot.Roll = 0.0f;
-		OwnerPlayer->SetActorRotation(ActorRot);
-
 		Velocity = DeltaRotation.RotateVector(Velocity);
 
-		if (PrintPlayerMovementComponent)
+		if (PrintPlayerMovementComponentRotation)
 		{
 			B_LOG_DEV("=============================================================");
+			B_LOG_DEV("RemainingYaw : % .1f", RemainingYaw);
+			B_LOG_DEV("RemainingYawPositive : % .1f", RemainingYawPositive);
+			B_LOG_DEV("DeltaYaw : % .1f", DeltaYaw);
+			B_LOG_DEV("YawFactor : % .1f", YawFactor);
+			B_LOG_DEV("CurrentYaw : % .1f", CurrentYaw);
+			B_LOG_DEV("TargetYaw : % .1f", TargetYaw);
 			B_LOG_DEV("Velocity Applied Rotation : %.1f, %.1f, %.1f", Velocity.X, Velocity.Y, Velocity.Z);
-			B_LOG_DEV("ControlRot.Yaw : %.1f", ControlRot.Yaw);
-			B_LOG_DEV("ActorRot.Yaw : % .1f", ActorRot.Yaw);
-			//B_LOG_DEV("ActorYaw : % .1f", ActorYaw);
-			B_LOG_DEV("RemainingAngle : %.1f", RemainingYaw);
-			B_LOG_DEV("DeltaYaw : %.1f", DeltaYaw);
-			//B_LOG_DEV("Ratio : %.1f", Ratio);
 		}
 	}
 	
