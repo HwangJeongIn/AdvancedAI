@@ -28,6 +28,9 @@ public:
 private:
 
 	void UpdateVelocity(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime);
+	void ApplyResistanceToVelocity(float DeltaTime);
+	void ApplyInputToVelocity(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime);
+
 
 	void UpdateTransform(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime);
 	void UpdateRotation(float DeltaTranslationScalar);
@@ -62,5 +65,5 @@ private:
 
 	/** cm/s^2 */
 	UPROPERTY(VisibleAnywhere)
-	float DefaultGravity;
+	float DefaultGravityScalar;
 };

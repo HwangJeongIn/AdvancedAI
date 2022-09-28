@@ -85,6 +85,9 @@ void ABPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &ABPlayer::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &ABPlayer::MoveRight);
+
+	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
+	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 }
 
 float ABPlayer::GetForwardMovementFactor() const
