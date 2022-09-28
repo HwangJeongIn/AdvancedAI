@@ -16,8 +16,9 @@ ABPlayer::ABPlayer()
 
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationRoll = false;
-	bUseControllerRotationYaw = true;
+	bUseControllerRotationYaw = false;
 
+	PlayerMovementComp = CreateDefaultSubobject<UBPlayerMovementComponent>("PlayerMovementComp");
 
 	CapsuleComp = CreateDefaultSubobject<UCapsuleComponent>("CapsuleComp");
 	CapsuleComp->InitCapsuleSize(34.0f, 88.0f);
@@ -58,7 +59,6 @@ ABPlayer::ABPlayer()
 	CameraComp = CreateDefaultSubobject<UCameraComponent>("CameraComp");
 	CameraComp->SetupAttachment(SpringArmComp);
 
-	PlayerMovementComp = CreateDefaultSubobject<UBPlayerMovementComponent>("PlayerMovementComp");
 
 	// 시뮬레이션 테스트
 	ForwardMovementFactor = 0.0f;

@@ -41,19 +41,19 @@ private:
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(Category = Components, VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	UCapsuleComponent* CapsuleComp;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(Category = Components, VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	USkeletalMeshComponent* MeshComp;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(Category = Components, VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	USpringArmComponent* SpringArmComp;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(Category = Components, VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* CameraComp;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(Category = Components, VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	UBPlayerMovementComponent* PlayerMovementComp;
 
 	float ForwardMovementFactor;
