@@ -89,18 +89,21 @@ void UBPlayerMovementComponent::UpdateVelocity(float ForwardMovementFactor, floa
 	/** 입력 계산 */
 	if (ForwardMovementFactor || RightMovementFactor)
 	{
-		const FVector RelativeDirection(ForwardMovementFactor, RightMovementFactor, 0.0f);
+		FVector InputRelativeDirection(ForwardMovementFactor, RightMovementFactor, 0.0f);
+		InputRelativeDirection.Normalize();
 
-		const FQuat RelativeDirectionRotation = RelativeDirection.ToOrientationQuat();
+		const FQuat InputRelativeDirectionRotation = InputRelativeDirection.ToOrientationQuat();
 		const FQuat VelocityRotation = Velocity.ToOrientationQuat();
 
-		const FQuat WorldDirectionRotation = RelativeDirectionRotation * VelocityRotation.Inverse();
-		const FVector WorldAcceleration = WorldDirectionRotation.Vector() * DefaultAccelerationScalar;
+		const FQuat InputWorldDirectionRotation = InputRelativeDirectionRotation * VelocityRotation.Inverse();
+
+		// DefaultAccelerationScalar = DefaultMovingForceScalar / DefaultMass
+		const FVector InputAcceleration = InputWorldDirectionRotation.Vector() * DefaultAccelerationScalar;
 
 		//FQuat AQuat = FQuat(RotA);
 		//FQuat BQuat = FQuat(RotB);
 		//return FRotator(BQuat * AQuat);
-		Velocity = Velocity + (WorldAcceleration * DeltaTime);
+		Velocity = Velocity + (InputAcceleration * DeltaTime);
 
 		if (PrintPlayerMovementComponent)
 		{
@@ -108,12 +111,31 @@ void UBPlayerMovementComponent::UpdateVelocity(float ForwardMovementFactor, floa
 		}
 	}
 
+	const float VelocityScalar = Velocity.Size();
+	if (0.1f <= VelocityScalar)
+	{
+		// 공기 저항 = (속도와 반대 방향) * 속도^2 * 항력계수
+		const float AirResistanceScalar = (VelocityScalar * VelocityScalar) * DragCoefficient;
 
-	/** 마찰력, 공기저항 계산 */
-	const float CurrentResistanceScalar = GetAirResistanceScalar(Velocity) + GetFrictionResistanceScalar(Velocity);
-	// F = ma => a = F / m
-	const float ResistanceAcceleration = CurrentResistanceScalar / DefaultMass;
-	Velocity = Velocity * (1.0f + CurrentResistanceScalar * DeltaTime);
+		// 마찰력 = (속도와 반대 방향) * 수직항력 * 마찰계수 // 수직항력의 경우 지면을 수평으로 간주하고 계산한다. (M * G)
+		const float NormalForce = DefaultMass * DefaultGravity;
+		const float FrictionResistanceScalar = FrictionCoefficient * NormalForce;
+
+		/** 마찰력, 공기저항 계산 */
+		const float CurrentResistanceScalar = AirResistanceScalar + FrictionResistanceScalar;
+		// F = ma => a = F / m
+		const float ResistanceAccelerationScalar = CurrentResistanceScalar / DefaultMass;
+		Velocity = Velocity.GetSafeNormal() * (VelocityScalar - (ResistanceAccelerationScalar * DeltaTime));
+	}
+	else
+	{
+		Velocity = FVector::ZeroVector;
+	}
+
+	if (PrintPlayerMovementComponent)
+	{
+		B_LOG_DEV("Final Velocity : %.1f, %.1f, %.1f", Velocity.X, Velocity.Y, Velocity.Z);
+	}
 }
 
 void UBPlayerMovementComponent::UpdateTransform(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime)
