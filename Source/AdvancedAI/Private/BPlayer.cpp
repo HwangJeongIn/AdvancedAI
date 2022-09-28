@@ -99,8 +99,7 @@ float ABPlayer::GetRightMovementFactor() const
 
 void ABPlayer::MoveForward(float Value)
 {
-	RightMovementFactor = Value;
-
+	ForwardMovementFactor = Value;
 	/*
 	FRotator ControlRot = GetControlRotation();
 	ControlRot.Pitch = 0.0f;
@@ -112,7 +111,7 @@ void ABPlayer::MoveForward(float Value)
 
 void ABPlayer::MoveRight(float Value)
 {
-	ForwardMovementFactor = Value;
+	RightMovementFactor = Value;
 
 	/*
 	FRotator ControlRot = GetControlRotation();

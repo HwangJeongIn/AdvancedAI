@@ -21,9 +21,9 @@ UBPlayerMovementComponent::UBPlayerMovementComponent()
 
 
 
-	DefaultMass = 100;			// 100kg
-	DefaultMovingForceScalar = 10000; // 10000(㎏ × (cm/s^2))
-	MinTurningRadius = 50;		// 50 cm
+	DefaultMass = 100;					// 100kg
+	DefaultMovingForceScalar = 100000;	// 100000(㎏ × (cm/s^2))cN
+	MinTurningRadius = 50;				// 50 cm
 
 	DragCoefficient = 16;
 	FrictionCoefficient = 0.015;
@@ -86,33 +86,9 @@ float UBPlayerMovementComponent::GetFrictionResistanceScalar(const FVector& Curr
 
 void UBPlayerMovementComponent::UpdateVelocity(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime)
 {
-	/** 입력 계산 */
-	if (ForwardMovementFactor || RightMovementFactor)
-	{
-		FVector InputRelativeDirection(ForwardMovementFactor, RightMovementFactor, 0.0f);
-		InputRelativeDirection.Normalize();
-
-		const FQuat InputRelativeDirectionRotation = InputRelativeDirection.ToOrientationQuat();
-		const FQuat VelocityRotation = Velocity.ToOrientationQuat();
-
-		const FQuat InputWorldDirectionRotation = InputRelativeDirectionRotation * VelocityRotation.Inverse();
-
-		// DefaultAccelerationScalar = DefaultMovingForceScalar / DefaultMass
-		const FVector InputAcceleration = InputWorldDirectionRotation.Vector() * DefaultAccelerationScalar;
-
-		//FQuat AQuat = FQuat(RotA);
-		//FQuat BQuat = FQuat(RotB);
-		//return FRotator(BQuat * AQuat);
-		Velocity = Velocity + (InputAcceleration * DeltaTime);
-
-		if (PrintPlayerMovementComponent)
-		{
-			B_LOG_DEV("Updated Velocity : %.1f, %.1f, %.1f", Velocity.X, Velocity.Y, Velocity.Z);
-		}
-	}
-
+	/** 저항 계산 */
 	const float VelocityScalar = Velocity.Size();
-	if (0.1f <= VelocityScalar)
+	if (0.01f <= VelocityScalar)
 	{
 		// 공기 저항 = (속도와 반대 방향) * 속도^2 * 항력계수
 		const float AirResistanceScalar = (VelocityScalar * VelocityScalar) * DragCoefficient;
@@ -126,10 +102,42 @@ void UBPlayerMovementComponent::UpdateVelocity(float ForwardMovementFactor, floa
 		// F = ma => a = F / m
 		const float ResistanceAccelerationScalar = CurrentResistanceScalar / DefaultMass;
 		Velocity = Velocity.GetSafeNormal() * (VelocityScalar - (ResistanceAccelerationScalar * DeltaTime));
+
+		if (PrintPlayerMovementComponent)
+		{
+			B_LOG_DEV("Final Velocity : %.1f, %.1f, %.1f", Velocity.X, Velocity.Y, Velocity.Z);
+		}
 	}
 	else
 	{
 		Velocity = FVector::ZeroVector;
+	}
+
+	/** 입력 계산 */
+	if (ForwardMovementFactor || RightMovementFactor)
+	{
+		FVector InputRelativeDirection(ForwardMovementFactor, RightMovementFactor, 0.0f);
+		InputRelativeDirection.Normalize();
+
+		//const FQuat InputRelativeDirectionRotation = InputRelativeDirection.ToOrientationQuat();
+		//const FQuat VelocityRotation = Velocity.ToOrientationQuat();
+
+		const FQuat ActorRotation = GetOwner()->GetActorQuat();
+		const FVector InputWorldDirection = ActorRotation.RotateVector(InputRelativeDirection);
+		const FVector InputAcceleration = InputWorldDirection * DefaultAccelerationScalar;
+
+		/*
+		const FQuat InputWorldDirectionRotation = InputRelativeDirectionRotation * (-VelocityRotation);
+		// DefaultAccelerationScalar = DefaultMovingForceScalar / DefaultMass
+		*/
+
+		Velocity = Velocity + (InputAcceleration * DeltaTime);
+
+		if (PrintPlayerMovementComponent)
+		{
+			B_LOG_DEV("InputWorldDirection : %.1f, %.1f, %.1f", InputWorldDirection.X, InputWorldDirection.Y, InputWorldDirection.Z);
+			B_LOG_DEV("Updated Velocity : %.1f, %.1f, %.1f", Velocity.X, Velocity.Y, Velocity.Z);
+		}
 	}
 
 	if (PrintPlayerMovementComponent)
