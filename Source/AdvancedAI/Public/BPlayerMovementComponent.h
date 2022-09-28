@@ -23,7 +23,7 @@ public:
 
 	float GetDeltaTranslationScalar(const FVector& CurrentVelocity, float DeltaTime) const;
 	float GetAirResistanceScalar(const FVector& CurrentVelocity) const;
-	float GetFrictionResistanceScalar() const;
+	float GetFrictionResistanceScalar(const FVector& CurrentVelocity) const;
 
 private:
 
@@ -35,33 +35,32 @@ private:
 
 	/** cm/s */
 	UPROPERTY(VisibleAnywhere)
-		FVector Velocity;
+	FVector Velocity;
 
 	/** kg */
 	UPROPERTY(EditDefaultsOnly)
-		float DefaultMass;
+	float DefaultMass;
 
 	/**
 	 * N = §¸ ¡¿ (m/s^2)
 	 * cN = §¸ ¡¿ (cm/s^2) */
 	UPROPERTY(EditDefaultsOnly)
-		float DefaultMovingForceScalar;
+	float DefaultMovingForceScalar;
 
 	UPROPERTY(EditDefaultsOnly)
-		float DefaultAccelerationScalar;
+	float DefaultAccelerationScalar;
 
 	/** cm */
 	UPROPERTY(EditDefaultsOnly)
-		float MinTurningRadius;
+	float MinTurningRadius;
 
 	UPROPERTY(EditDefaultsOnly)
-		float DragCoefficient;
+	float DragCoefficient;
 
 	UPROPERTY(EditDefaultsOnly)
-		float FrictionCoefficient;
+	float FrictionCoefficient;
 
 	/** cm/s^2 */
 	UPROPERTY(VisibleAnywhere)
-		float DefaultGravity;
-
+	float DefaultGravity;
 };
