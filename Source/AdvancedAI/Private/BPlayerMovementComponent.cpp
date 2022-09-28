@@ -26,14 +26,17 @@ UBPlayerMovementComponent::UBPlayerMovementComponent()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 
-
-
 	DefaultMass = 100;					// 100kg
-	DefaultMovingForceScalar = 100000;	// 100000(㎏ × (cm/s^2))cN
+	DefaultMovingForceScalar = 180000;	// 180000cN (㎏ × (cm/s^2))cN
+	// Acceleration : 1800 (cm/s^2) => 1.8 (m/s^2)
+
 	MinTurningRadius = 50;				// 50 cm
 
-	DragCoefficient = 16;
-	FrictionCoefficient = 0.015;
+	// Person(upright position) : 1.0 - 1.3
+	DragCoefficient = 1.3;
+
+	// dry roads : 0.7 , wet roads : 0.4
+	FrictionCoefficient = 0.7;
 }
 
 void UBPlayerMovementComponent::BeginPlay()
@@ -194,7 +197,7 @@ float UBPlayerMovementComponent::ConvertToControlRotationRange(float angle) cons
 
 	if (0.0f > angle)
 	{
-		angle += MaxAngle;
+		intAngle += MaxAngle;
 	}
 
 	return ((float)intAngle / AngleFactor);
@@ -239,6 +242,13 @@ void UBPlayerMovementComponent::UpdateRotation(float DeltaTranslationScalar)
 
 	if (0.1f < RemainingYawPositive)
 	{
+		MinTurningRadius = Velocity.Size() / 2; // 각도는 45도로 가정
+
+		if (1.0f < MinTurningRadius)
+		{
+			return;
+		}
+
 		// 각도(θ) * 반지름(r) = 호의 길이(l)
 		float DeltaYawPositive = FMath::RadiansToDegrees<float>(DeltaTranslationScalar / MinTurningRadius);
 		if (DeltaYawPositive > RemainingYawPositive)
