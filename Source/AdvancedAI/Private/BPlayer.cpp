@@ -90,6 +90,16 @@ void ABPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 }
 
+FVector ABPlayer::GetVelocity() const
+{
+	if (PlayerMovementComp)
+	{
+		return PlayerMovementComp->GetPlayerVelocity();
+	}
+
+	return FVector::ZeroVector;
+}
+
 float ABPlayer::GetForwardMovementFactor() const
 {
 	return ForwardMovementFactor;

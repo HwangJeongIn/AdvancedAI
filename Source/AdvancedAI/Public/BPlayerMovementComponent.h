@@ -21,6 +21,12 @@ protected:
 public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
+	UFUNCTION(BlueprintCallable)
+	FVector GetPlayerVelocity() const;
+
+	UFUNCTION(BlueprintCallable)
+	float GetCurrentYaw() const;
+
 	float GetDeltaTranslationScalar(const FVector& CurrentVelocity, float DeltaTime) const;
 	float GetAirResistanceScalar(const FVector& CurrentVelocity) const;
 	float GetFrictionResistanceScalar(const FVector& CurrentVelocity) const;
@@ -39,8 +45,9 @@ private:
 
 	// 속도 관련 계산 ======================================================================================
 
+
 	/** cm/s */
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(Category = PlayerMovement, VisibleAnywhere)
 	FVector Velocity;
 
 	/** kg */
@@ -69,10 +76,11 @@ private:
 	// 회전 관련 계산 ======================================================================================
 
 	/** cm */
-	UPROPERTY(EditDefaultsOnly)
+
+	UPROPERTY(Category = PlayerMovement, VisibleAnywhere)
 	float MinTurningRadius;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(Category = PlayerMovement, VisibleAnywhere)
 	float CurrentYaw;
 
 

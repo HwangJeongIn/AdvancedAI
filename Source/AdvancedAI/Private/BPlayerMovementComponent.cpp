@@ -83,6 +83,16 @@ void UBPlayerMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	UpdateTransform(ForwardMovementFactor, RightMovementFactor, DeltaTime);
 }
 
+FVector UBPlayerMovementComponent::GetPlayerVelocity() const
+{
+	return Velocity;
+}
+
+float UBPlayerMovementComponent::GetCurrentYaw() const
+{
+	return CurrentYaw;
+}
+
 float UBPlayerMovementComponent::GetDeltaTranslationScalar(const FVector& CurrentVelocity, float DeltaTime) const
 {
 	return CurrentVelocity.Size() * DeltaTime;
@@ -242,13 +252,6 @@ void UBPlayerMovementComponent::UpdateRotation(float DeltaTranslationScalar)
 
 	if (0.1f < RemainingYawPositive)
 	{
-		MinTurningRadius = Velocity.Size() / 2; // 각도는 45도로 가정
-
-		if (1.0f < MinTurningRadius)
-		{
-			return;
-		}
-
 		// 각도(θ) * 반지름(r) = 호의 길이(l)
 		float DeltaYawPositive = FMath::RadiansToDegrees<float>(DeltaTranslationScalar / MinTurningRadius);
 		if (DeltaYawPositive > RemainingYawPositive)

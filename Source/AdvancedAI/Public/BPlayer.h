@@ -32,9 +32,12 @@ public:
 	//virtual void Tick(float DeltaTime) override;
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual FVector GetVelocity() const override;
 
 	float GetForwardMovementFactor() const;
 	float GetRightMovementFactor() const;
+
+
 
 private:
 
