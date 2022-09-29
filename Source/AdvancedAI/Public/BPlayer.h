@@ -34,6 +34,9 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual FVector GetVelocity() const override;
 
+	UFUNCTION(BlueprintCallable)
+	float GetCurrentYaw() const;
+
 	float GetForwardMovementFactor() const;
 	float GetRightMovementFactor() const;
 

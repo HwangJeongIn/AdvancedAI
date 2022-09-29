@@ -100,6 +100,17 @@ FVector ABPlayer::GetVelocity() const
 	return FVector::ZeroVector;
 }
 
+
+float ABPlayer::GetCurrentYaw() const
+{
+	if (PlayerMovementComp)
+	{
+		return PlayerMovementComp->GetCurrentYaw();
+	}
+
+	return 0.0f;
+}
+
 float ABPlayer::GetForwardMovementFactor() const
 {
 	return ForwardMovementFactor;
