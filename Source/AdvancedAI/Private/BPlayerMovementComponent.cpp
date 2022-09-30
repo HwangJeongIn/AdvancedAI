@@ -27,10 +27,12 @@ UBPlayerMovementComponent::UBPlayerMovementComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 
 	DefaultMass = 100;					// 100kg
-	MaxVelocity = 1000;					// 1000 cm/s = 10 m/s
-	
+	MaxVelocityScalar = 1000;			// 1000 cm/s = 10 m/s
+	CurrentMaxVelocityFactor = 1.0f;
+	MaxVelocityScalar = MaxVelocityScalar * CurrentMaxVelocityFactor;
+
 	// MaxVelocity 기준으로 계산한다.
-	// DefaultMovingForceScalar = 100000;	// 100000cN (㎏ × (cm/s^2))cN
+	// MovingForceScalar = 100000;	// 100000cN (㎏ × (cm/s^2))cN
 	// Acceleration : 1000 (cm/s^2) => 10 (m/s^2)
 
 	MinTurningRadius = 100;				// 100 cm
@@ -67,7 +69,7 @@ void UBPlayerMovementComponent::BeginPlay()
 		CurrentYaw += 360.0f;
 	}
 
-	DefaultAccelerationScalar = DefaultMovingForceScalar / DefaultMass;
+	RefreshMovingVariable();
 }
 
 void UBPlayerMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -90,6 +92,12 @@ void UBPlayerMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 
 	UpdateVelocity(ForwardMovementFactor, RightMovementFactor, DeltaTime);
 	UpdateTransform(ForwardMovementFactor, RightMovementFactor, DeltaTime);
+}
+
+void UBPlayerMovementComponent::SetMaxVelocityFactor(const float NewMaxVelocityFactor)
+{
+	CurrentMaxVelocityFactor = NewMaxVelocityFactor;
+	RefreshMovingVariable();
 }
 
 FVector UBPlayerMovementComponent::GetPlayerVelocity() const
@@ -133,6 +141,15 @@ float UBPlayerMovementComponent::GetFrictionResistanceScalar() const
 	return FrictionCoefficient * NormalForce;
 }
 
+void UBPlayerMovementComponent::RefreshMovingVariable()
+{
+	CurrentMaxVelocityScalar = MaxVelocityScalar * CurrentMaxVelocityFactor;
+
+	// 최대 속력일 때 저항하는 힘과 같은 힘을 줘야한다.
+	MovingForceScalar = GetResistanceScalar(CurrentMaxVelocityScalar);
+	AccelerationScalar = MovingForceScalar / DefaultMass;
+}
+
 void UBPlayerMovementComponent::UpdateVelocity(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime)
 {
 	ApplyInputToVelocity(ForwardMovementFactor, RightMovementFactor, DeltaTime);
@@ -148,13 +165,7 @@ void UBPlayerMovementComponent::ApplyResistanceToVelocity(float DeltaTime)
 		return;
 	}
 
-
-
-
-
-	// F = ma => a = F / m
-	//const FVector ResistanceAcceleration = -Velocity.GetSafeNormal() * (CurrentResistanceScalar / DefaultMass);
-	const float ResistanceAccelerationScalar = (CurrentResistanceScalar / DefaultMass);
+	const float ResistanceAccelerationScalar = (GetResistanceScalar(VelocityScalar) / DefaultMass);
 	const float DeltaResistanceVelocityScalar = DeltaTime * ResistanceAccelerationScalar;
 
 	if (VelocityScalar <= DeltaResistanceVelocityScalar)
@@ -172,8 +183,8 @@ void UBPlayerMovementComponent::ApplyResistanceToVelocity(float DeltaTime)
 		B_LOG_DEV("DeltaResistanceVelocityScalar : %.1f", DeltaResistanceVelocityScalar);
 
 		B_LOG_DEV("VelocityScalar : %.1f", VelocityScalar);
-		B_LOG_DEV("AirResistanceScalar : %.1f", AirResistanceScalar);
-		B_LOG_DEV("FrictionResistanceScalar : %.1f", FrictionResistanceScalar);
+		B_LOG_DEV("AirResistanceScalar : %.1f", GetAirResistanceScalar(VelocityScalar));
+		B_LOG_DEV("FrictionResistanceScalar : %.1f", GetFrictionResistanceScalar());
 	}
 
 	Velocity = Velocity + DeltaResistanceVelocity;
@@ -201,13 +212,13 @@ void UBPlayerMovementComponent::ApplyInputToVelocity(float ForwardMovementFactor
 	const FQuat ActorRotation = GetOwner()->GetActorQuat();
 	const FVector InputWorldDirection = ActorRotation.RotateVector(InputRelativeDirection);
 
-	// DefaultAccelerationScalar = DefaultMovingForceScalar / DefaultMass;
-	const FVector InputDeltaVelocity = InputWorldDirection * DefaultAccelerationScalar * DeltaTime;
+	// AccelerationScalar = MovingForceScalar / DefaultMass;
+	const FVector InputDeltaVelocity = InputWorldDirection * AccelerationScalar * DeltaTime;
 	Velocity = Velocity + InputDeltaVelocity;
 
 	/*
 	const FQuat InputWorldDirectionRotation = InputRelativeDirectionRotation * (-VelocityRotation);
-	// DefaultAccelerationScalar = DefaultMovingForceScalar / DefaultMass
+	// AccelerationScalar = MovingForceScalar / DefaultMass
 	*/
 	if (PrintPlayerMovementComponentVelocity)
 	{

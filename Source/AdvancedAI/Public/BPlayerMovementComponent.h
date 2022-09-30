@@ -21,6 +21,8 @@ protected:
 public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
+	void SetMaxVelocityFactor(const float NewMaxVelocityFactor);
+
 	UFUNCTION(BlueprintCallable)
 	FVector GetPlayerVelocity() const;
 
@@ -35,6 +37,8 @@ public:
 
 private:
 
+	void RefreshMovingVariable();
+
 	void UpdateVelocity(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime);
 	void ApplyResistanceToVelocity(float DeltaTime);
 	void ApplyInputToVelocity(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime);
@@ -47,9 +51,14 @@ private:
 
 	// 속도 관련 계산 ======================================================================================
 
-	/** cm/s */
 	UPROPERTY(EditDefaultsOnly)
-	float MaxVelocity;
+	float MaxVelocityScalar;
+
+	UPROPERTY(VisibleAnywhere)
+	float CurrentMaxVelocityScalar;
+
+	UPROPERTY(VisibleAnywhere)
+	float CurrentMaxVelocityFactor;
 
 	/** cm/s */
 	UPROPERTY(VisibleAnywhere)
@@ -62,11 +71,11 @@ private:
 	/**
 	 * N = ㎏ × (m/s^2)
 	 * cN = ㎏ × (cm/s^2) */
-	UPROPERTY(EditAnywhere)
-	float DefaultMovingForceScalar;
+	UPROPERTY(VisibleAnywhere)
+	float MovingForceScalar;
 
-	UPROPERTY(EditDefaultsOnly)
-	float DefaultAccelerationScalar;
+	UPROPERTY(VisibleAnywhere)
+	float AccelerationScalar;
 
 	UPROPERTY(EditDefaultsOnly)
 	float DragCoefficient;
