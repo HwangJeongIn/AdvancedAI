@@ -7,7 +7,7 @@
 #include "BPlayerMovementComponent.generated.h"
 
 
-UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
+UCLASS(/*ClassGroup = (Custom), meta = (BlueprintSpawnableComponent)*/)
 class ADVANCEDAI_API UBPlayerMovementComponent : public UActorComponent
 {
 	GENERATED_BODY()
@@ -28,8 +28,10 @@ public:
 	float GetCurrentYaw() const;
 
 	float GetDeltaTranslationScalar(const FVector& CurrentVelocity, float DeltaTime) const;
-	float GetAirResistanceScalar(const FVector& CurrentVelocity) const;
-	float GetFrictionResistanceScalar(const FVector& CurrentVelocity) const;
+
+	float GetResistanceScalar(const float VelocityScalar /* Speed */) const;
+	float GetAirResistanceScalar(const float VelocityScalar /* Speed */) const;
+	float GetFrictionResistanceScalar() const;
 
 private:
 
@@ -45,9 +47,12 @@ private:
 
 	// 속도 관련 계산 ======================================================================================
 
+	/** cm/s */
+	UPROPERTY(EditDefaultsOnly)
+	float MaxVelocity;
 
 	/** cm/s */
-	UPROPERTY(Category = PlayerMovement, VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere)
 	FVector Velocity;
 
 	/** kg */
@@ -57,7 +62,7 @@ private:
 	/**
 	 * N = ㎏ × (m/s^2)
 	 * cN = ㎏ × (cm/s^2) */
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditAnywhere)
 	float DefaultMovingForceScalar;
 
 	UPROPERTY(EditDefaultsOnly)
@@ -76,11 +81,10 @@ private:
 	// 회전 관련 계산 ======================================================================================
 
 	/** cm */
-
-	UPROPERTY(Category = PlayerMovement, VisibleAnywhere)
+	UPROPERTY(EditDefaultsOnly)
 	float MinTurningRadius;
 
-	UPROPERTY(Category = PlayerMovement, VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere)
 	float CurrentYaw;
 
 
