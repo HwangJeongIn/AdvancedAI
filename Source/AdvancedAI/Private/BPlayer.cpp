@@ -94,7 +94,7 @@ FVector ABPlayer::GetVelocity() const
 {
 	if (PlayerMovementComp)
 	{
-		return PlayerMovementComp->GetPlayerVelocity();
+		return PlayerMovementComp->GetVelocity();
 	}
 
 	return FVector::ZeroVector;

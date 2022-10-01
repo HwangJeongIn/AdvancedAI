@@ -49,7 +49,6 @@ void UBPlayerMovementComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-
 	AActor* Owner = GetOwner();
 
 	// 속도 단위가 cm기준인데, 속도^2하는 식이 나오기 때문에 100으로 나눠준다. 정확하게 확인할 필요가 있다.
@@ -77,7 +76,6 @@ void UBPlayerMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-
 	ABPlayer* OwnerPlayer = Cast<ABPlayer>(GetOwner());
 	if (nullptr == OwnerPlayer)
 	{
@@ -94,14 +92,14 @@ void UBPlayerMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	// 클라이언트나 서버가 컨트롤하고 있는 폰일 경우
 	if (OwnerPlayer->IsLocallyControlled())
 	{
-		const AGameStateBase* CurrentGameState = nullptr != GetWorld() ? GetWorld()->GetGameState() : nullptr;
-		if (nullptr == CurrentGameState)
+		float SharedWorldTime = 0.0f;
+		if (false == GetSharedWorldTime(SharedWorldTime))
 		{
 			return;
 		}
 
 		FPlayerMovementObject LastMovementObject;
-		LastMovementObject.Set(CurrentGameState->GetServerWorldTimeSeconds()
+		LastMovementObject.Set(SharedWorldTime
 						, DeltaTime
 						, ForwardMovementFactor
 						, RightMovementFactor);
@@ -122,6 +120,9 @@ void UBPlayerMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 		{
 			PendingMovementObjects.Add(LastMovementObject);
 			ServerMove(LastMovementObject);
+
+			// 클라이언트는 클라이언트대로 시뮬레이션 해야한다.
+			SimulateMovementObject(LastMovementObject);
 		}
 		break;
 		case ROLE_Authority:
@@ -133,7 +134,7 @@ void UBPlayerMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	}
 	else if(CurrentActorRole == ROLE_SimulatedProxy) // 시뮬레이션 중인 폰이라면 서버에서 받은 MovementState를 참고하여 보간을 진행한다.
 	{
-		ClientTick(DeltaTime);
+		InterpolateFromClient(DeltaTime);
 	}
 }
 
@@ -181,10 +182,22 @@ float UBPlayerMovementComponent::GetCurrentYaw() const
 
 // Begin : Replication 관련 코드 =============================================================================================
 
+bool UBPlayerMovementComponent::GetSharedWorldTime(float& SharedWorldTime) const
+{
+	const AGameStateBase* CurrentGameState = nullptr != GetWorld() ? GetWorld()->GetGameState() : nullptr;
+	if (nullptr == CurrentGameState)
+	{
+		B_ASSERT_DEV(false, "GameState 이나 World 가 존재하지 않습니다.")
+			return false;
+	}
+
+	SharedWorldTime = CurrentGameState->GetServerWorldTimeSeconds();
+	return true;
+}
 
 void UBPlayerMovementComponent::ServerMove_Implementation(const FPlayerMovementObject& MovementObject)
 {
-	ClientSimulatedTime += MovementObject.DeltaTime;
+	ClientSimulatedTimeInServer += MovementObject.DeltaTime;
 
 	SimulateMovementObject(MovementObject);
 	UpdateMovementState(MovementObject);
@@ -198,16 +211,15 @@ bool UBPlayerMovementComponent::ServerMove_Validate(const FPlayerMovementObject&
 		return false;
 	}
 
-	const float CurrentClientSimulatedTime = ClientSimulatedTime + MovementObject.DeltaTime;
-	const AGameStateBase* CurrentGameState = nullptr != GetWorld() ? GetWorld()->GetGameState() : nullptr;
-	if (nullptr == CurrentGameState)
+	float ServerSimulatedTime = 0.0f;
+	if (false == GetSharedWorldTime(ServerSimulatedTime))
 	{
 		B_ASSERT_DEV(false, "서버에서 시뮬레이션 시간을 받아올 수 없습니다. 일단 강제 로그아웃 처리합니다.")
 		return false;
 	}
 
-	const float ServerSimulatedTime = CurrentGameState->GetServerWorldTimeSeconds();
-	if (ServerSimulatedTime < CurrentClientSimulatedTime)
+	const float CurrentClientSimulatedTimeInServer = ClientSimulatedTimeInServer + MovementObject.DeltaTime;
+	if (ServerSimulatedTime < CurrentClientSimulatedTimeInServer)
 	{
 		B_ASSERT_DEV(false, "클라이언트의 시뮬레이션 진행 시간이 비정상입니다. 강제 로그아웃 처리합니다.")
 		return false;
@@ -221,6 +233,108 @@ void UBPlayerMovementComponent::UpdateMovementState(const FPlayerMovementObject&
 	MovementState.LastMovementObjectSharedWorldTime = MovementObject.SharedWorldTime;
 	MovementState.Tranform = GetOwner()->GetActorTransform();
 	MovementState.Velocity = GetVelocity();
+	/* const bool Result = */GetSharedWorldTime(MovementState.DepartureTime);
+}
+
+
+void UBPlayerMovementComponent::OnRep_MovementState()
+{
+	/**
+	 * TODO : 서버와 클라이언트의 동기화된 시간 변수가 서버에서 얼마나 자주 클라이언트로 리플리케이션 되는 지 확인해야 한다.
+	 * 동기화가 잘 되지 않는다면 RTT / 2 를 계산할 때, 다른 방법을 사용해야한다.
+	 *
+	 * 다른 방법
+	 *  : 클라이언트에서 패킷을 보낼 때 타임 스탬프를 찍어 보내고, 서버에서 다시 클라이언트로 보낼 때 해당 타임 스탬프를 그대로 보낸다.
+	 *  : 클라이언트에서 해당 타임 스탬프를 기준으로 RTT를 구하고 RTT / 2 를 구한다 */
+
+	 /** RTT / 2 */
+	float FromServerToClientTime = 0.0f;
+	float ClientSimulatedTime = 0.0f;
+	if (GetSharedWorldTime(ClientSimulatedTime))
+	{
+		FromServerToClientTime = ClientSimulatedTime - MovementState.DepartureTime;
+	}
+
+	const ENetRole CurrentActorRole = GetOwnerRole();
+	switch (CurrentActorRole)
+	{
+	case ROLE_SimulatedProxy:
+	{
+		UpdateSimulatedProxyFromMovementState(FromServerToClientTime);
+	}
+	break;
+	case ROLE_AutonomousProxy:
+	{
+		UpdateAutonomousProxyFromMovementState(FromServerToClientTime);
+	}
+	break;
+	}
+}
+
+void UBPlayerMovementComponent::UpdateSimulatedProxyFromMovementState(float FromServerToClientTime /* RTT / 2 */)
+{
+
+	/*
+	 * AutonomousProxy 의 경우 미쳐리된 입력까지 모두 알고 있기 때문에 정확하게 시뮬레이션 할 수 있다.
+	 * RTT / 2 만큼 차이나는 시뮬레이션을 처리하기 위해 보간 방법이 아닌, 다른 작업을 해주지 않아도 될것 같다.
+	 * 보간을 사용하지 않고, 서버에서 받은 상태(MovementState)에서 RTT / 2 만큼 미처리된 입력을 시뮬레이션한다.
+
+	 */
+
+	//===================================
+	/*
+	ClientTimeBetweenLastUpdates = ClientTimeSinceUpdate;
+	ClientTimeSinceUpdate = 0;
+
+	if (MeshOffsetRoot != nullptr)
+	{
+		ClientStartTransform.SetLocation(MeshOffsetRoot->GetComponentLocation());
+		ClientStartTransform.SetRotation(MeshOffsetRoot->GetComponentQuat());
+	}
+	ClientStartVelocity = MovementComponent->GetVelocity();
+
+	GetOwner()->SetActorTransform(ServerState.Tranform);*/
+}
+
+void UBPlayerMovementComponent::CalculateMovementByDeadReckoning(float DeltaTime)
+{
+	TargetLocation += TargetVelocity * DeltaTime;
+}
+
+void UBPlayerMovementComponent::InterpolateFromClient(float DeltaTime)
+{
+	/** Location 보간 */
+
+	/** Velocity 보간 */
+}
+
+void UBPlayerMovementComponent::UpdateAutonomousProxyFromMovementState(float FromServerToClientTime /* RTT / 2 */)
+{
+	/*
+	 * AutonomousProxy 의 경우 미쳐리된 입력까지 모두 알고 있기 때문에 정확하게 시뮬레이션 할 수 있다.
+	 * RTT / 2 만큼 차이나는 시뮬레이션을 처리하기 위해 보간 방법이 아닌, 다른 작업을 해주지 않아도 될것 같다.
+	 * 보간을 사용하지 않고, 서버에서 받은 상태(MovementState)에서 RTT / 2 만큼 미처리된 입력을 시뮬레이션한다.
+	 * 
+	 * 네트워크 상태가 좋지 않다면 기존에 클라이언트에서 시뮬레이션했던 것보다 이전 경로에 위치하게 될 것이지만, 현재 서버와 움직임을 최대한 맞출 수 있다.
+	 * 네트워크 상태가 좋지 않으면 클라이언트에서 끊기지 않게 모든 미처리된 입력을 시뮬레이션할 수도 있지만, 서버보다 움직임이 앞선다. 각각 장단점이 있다. */
+
+	// 서버에서도 처리된 입력은 삭제한다.
+	RemoveProcessedMovementObjects(MovementState.LastMovementObjectSharedWorldTime);
+
+	// 서버에서 받은 상태를 바로 적용하고, 나머지 미처리된 입력을 시뮬레이션한다.
+	GetOwner()->SetActorTransform(MovementState.Tranform);
+	SetVelocity(MovementState.Velocity);
+
+	// 서버에서의 WorldTime을 예측하여, 그 시간까지 입력을 시뮬레이션하여 서버와의 움직임을 동기화한다. (예측 : 리플리케이션된 서버의 WorldTime + RTT / 2)
+	const float ExpectedServerSharedWorldTime = MovementState.LastMovementObjectSharedWorldTime + FromServerToClientTime;
+	for (const FPlayerMovementObject& MovementObject : PendingMovementObjects)
+	{
+		if (ExpectedServerSharedWorldTime < MovementObject.SharedWorldTime)
+		{
+			break;
+		}
+		SimulateMovementObject(MovementObject);
+	}
 }
 
 void UBPlayerMovementComponent::RemoveProcessedMovementObjects(float LastMovementObjectSharedWorldTime)
@@ -246,34 +360,6 @@ void UBPlayerMovementComponent::RemoveProcessedMovementObjects(float LastMovemen
 	PendingMovementObjects = NewPendingMovementObjects;
 }
 
-void UBPlayerMovementComponent::OnRep_MovementState()
-{
-	const ENetRole CurrentActorRole = GetOwnerRole();
-	
-	switch (CurrentActorRole)
-	{
-	case ROLE_SimulatedProxy:
-	{
-		
-	}
-	break;
-	case ROLE_AutonomousProxy:
-	{
-		// 서버에서도 처리된 입력은 삭제한다.
-		RemoveProcessedMovementObjects(MovementState.LastMovementObjectSharedWorldTime);
-		
-		// 서버에서 받은 상태를 바로 적용하고, 나머지 미처리된 입력을 시뮬레이션한다.
-		GetOwner()->SetActorTransform(MovementState.Tranform);
-		SetVelocity(MovementState.Velocity);
-
-		for (const FPlayerMovementObject& MovementObject : PendingMovementObjects)
-		{
-			SimulateMovementObject(MovementObject);
-		}
-	}
-	break;
-	}
-}
 
 
 // End : Replication 관련 코드 =============================================================================================
@@ -427,15 +513,15 @@ float UBPlayerMovementComponent::ConvertToControlRotationRange(float angle) cons
 	static const int AngleFactor = 100;
 	static const int MaxAngle = 360 * AngleFactor;
 
-	int intAngle = angle * AngleFactor;
-	intAngle %= MaxAngle;
+	int IntAngle = angle * AngleFactor;
+	IntAngle %= MaxAngle;
 
 	if (0.0f > angle)
 	{
-		intAngle += MaxAngle;
+		IntAngle += MaxAngle;
 	}
 
-	return ((float)intAngle / AngleFactor);
+	return ((float)IntAngle / AngleFactor);
 }
 
 void UBPlayerMovementComponent::UpdateTransform(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime)
@@ -452,8 +538,7 @@ void UBPlayerMovementComponent::UpdateRotation(float DeltaTranslationScalar)
 	 * 따라서 ActionRotation은 [-180, 180]까지의 범위를 가진다.
 	 * ControlRotation은 [0, 360]의 범위를 가진다.
 	 * CurrentYaw를 변수로 두고 [0, 360]의 같은 범위에서 계산한다. 
-	 * 최종적으로 CurrentYaw를 통해 ActorRotation을 설정한다.
-	 */
+	 * 최종적으로 CurrentYaw를 통해 ActorRotation을 설정한다. */
 
 	ABPlayer* OwnerPlayer = Cast<ABPlayer>(GetOwner());
 
