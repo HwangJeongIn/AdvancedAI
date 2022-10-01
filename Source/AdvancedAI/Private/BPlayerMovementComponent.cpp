@@ -86,31 +86,58 @@ void UBPlayerMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	const float RightMovementFactor = OwnerPlayer->GetRightMovementFactor();
 
 	// if (GetOwnerRole() == ROLE_AutonomousProxy || GetOwner()->GetRemoteRole() == ROLE_SimulatedProxy)
+
 	// 클라이언트나 서버가 컨트롤하고 있는 폰일 경우
 	if (OwnerPlayer->IsLocallyControlled())
 	{
+
+
 		const AGameStateBase* CurrentGameState = nullptr != GetWorld() ? GetWorld()->GetGameState() : nullptr;
 		if (nullptr == CurrentGameState)
 		{
 			return;
 		}
 
-		//LastMoveObject.SharedWorldTime = CurrentGameState->GetServerWorldTimeSeconds();
-		//LastMoveObject.DeltaTime = DeltaTime;
-		//LastMoveObject.ForwardMovementFactor = ForwardMovementFactor;
-		//LastMoveObject.RightMovementFactor = RightMovementFactor;
+		//LastMovementObject.SharedWorldTime = CurrentGameState->GetServerWorldTimeSeconds();
+		//LastMovementObject.DeltaTime = DeltaTime;
+		//LastMovementObject.ForwardMovementFactor = ForwardMovementFactor;
+		//LastMovementObject.RightMovementFactor = RightMovementFactor;
 
-		LastMoveObject.Set(CurrentGameState->GetServerWorldTimeSeconds()
+		LastMovementObject.Set(CurrentGameState->GetServerWorldTimeSeconds()
 						, DeltaTime
 						, ForwardMovementFactor
 						, RightMovementFactor);
 		
-		SimulateMoveObject(LastMoveObject);
+		SimulateMovementObject(LastMovementObject);
+
+
+		const ENetRole CurrentActorRole = OwnerPlayer->GetLocalRole();
+		const ENetRole CurrentActorRemoteRole = OwnerPlayer->GetRemoteRole();
+
+		// 클라이언트일 경우에만 서버로 보내준다.
+		/*
+		if (CurrentActorRole == ROLE_AutonomousProxy)
+		{
+			UnacknowledgedMoves.Add(LastMove);
+			Server_SendMove(LastMove);
+		}
+
+		// We are the server and in control of the pawn.
+		if (GetOwner()->GetRemoteRole() == ROLE_SimulatedProxy)
+		{
+			UpdateServerState(LastMove);
+		}
+
+		if (GetOwnerRole() == ROLE_SimulatedProxy)
+		{
+			ClientTick(DeltaTime);
+		}
+		*/
 	}
 }
 
 /*
-bool UBPlayerMovementComponent::CreateMoveObject(float DeltaTime, FPlayerMoveObject& NewMoveObject) const
+bool UBPlayerMovementComponent::CreateMovementObject(float DeltaTime, FPlayerMovementObject& NewMovementObject) const
 {
 	const AGameStateBase* CurrentGameState = nullptr != GetWorld() ? GetWorld()->GetGameState() : nullptr;
 	if (nullptr == CurrentGameState)
@@ -118,11 +145,11 @@ bool UBPlayerMovementComponent::CreateMoveObject(float DeltaTime, FPlayerMoveObj
 		return false;
 	}
 
-	NewMoveObject.DeltaTime = DeltaTime;
-	NewMoveObject.SharedTime = CurrentGameState->GetServerWorldTimeSeconds();
+	NewMovementObject.DeltaTime = DeltaTime;
+	NewMovementObject.SharedTime = CurrentGameState->GetServerWorldTimeSeconds();
 
-	NewMoveObject.SteeringThrow = SteeringThrow;
-	NewMoveObject.Throttle = Throttle;
+	NewMovementObject.SteeringThrow = SteeringThrow;
+	NewMovementObject.Throttle = Throttle;
 	return true;
 }
 */
@@ -146,12 +173,23 @@ float UBPlayerMovementComponent::GetCurrentYaw() const
 
 // Begin : Replication 관련 코드 =============================================================================================
 
-
-void UBPlayerMovementComponent::SimulateMoveObject(const FPlayerMoveObject& MoveObject)
+/*
+void UBPlayerMovementComponent::ServerMove_Implementation(FPlayerMovementObject MovementObject)
 {
-	const float DeltaTime = MoveObject.DeltaTime;
-	const float ForwardMovementFactor = MoveObject.ForwardMovementFactor;
-	const float RightMovementFactor = MoveObject.RightMovementFactor;
+
+}
+
+bool UBPlayerMovementComponent::ServerMove_Validate(FPlayerMovementObject MovementObject)
+{
+	return true;
+}
+*/
+
+void UBPlayerMovementComponent::SimulateMovementObject(const FPlayerMovementObject& MovementObject)
+{
+	const float DeltaTime = MovementObject.DeltaTime;
+	const float ForwardMovementFactor = MovementObject.ForwardMovementFactor;
+	const float RightMovementFactor = MovementObject.RightMovementFactor;
 
 	if (PrintPlayerMovementComponentVelocity)
 	{

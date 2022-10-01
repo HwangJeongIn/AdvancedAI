@@ -7,7 +7,7 @@
 #include "BPlayerMovementComponent.generated.h"
 
 USTRUCT()
-struct FPlayerMoveObject
+struct FPlayerMovementObject
 {
 	GENERATED_USTRUCT_BODY()
 
@@ -37,7 +37,36 @@ struct FPlayerMoveObject
 			&& (1 >= FMath::Abs(RightMovementFactor));
 	}
 };
+/*
+USTRUCT()
+struct FPlayerMovementState
+{
+	GENERATED_USTRUCT_BODY()
 
+	UPROPERTY()
+	FTransform Tranform;
+
+	UPROPERTY()
+	FVector Velocity;
+
+	UPROPERTY()
+	FPlayerMovementObject LastMovementObject;
+};
+
+struct FHermiteCubicSpline
+{
+	FVector StartLocation, StartDerivative, TargetLocation, TargetDerivative;
+
+	FVector InterpolateLocation(float LerpRatio) const
+	{
+		return FMath::CubicInterp(StartLocation, StartDerivative, TargetLocation, TargetDerivative, LerpRatio);
+	}
+	FVector InterpolateDerivative(float LerpRatio) const
+	{
+		return FMath::CubicInterpDerivative(StartLocation, StartDerivative, TargetLocation, TargetDerivative, LerpRatio);
+	}
+};
+*/
 
 UCLASS(/*ClassGroup = (Custom), meta = (BlueprintSpawnableComponent)*/)
 class ADVANCEDAI_API UBPlayerMovementComponent : public UActorComponent
@@ -66,12 +95,21 @@ public:
 private:
 	// Begin : Replication 관련 코드 =============================================================================================
 
-	// bool CreateMoveObject(float DeltaTime, FPlayerMoveObject& NewMoveObject) const;
-	void SimulateMoveObject(const FPlayerMoveObject& MoveObject);
+	//UFUNCTION(Server, Reliable, WithValidation)
+	//void ServerMove(FPlayerMovementObject MovementObject);
+
+
+
+	// bool CreateMovementObject(float DeltaTime, FPlayerMovementObject& NewMovementObject) const;
+
+	
+	void SimulateMovementObject(const FPlayerMovementObject& MovementObject);
+
+
 
 
 	/** 플레이어의 이동 입력 */
-	FPlayerMoveObject LastMoveObject;
+	FPlayerMovementObject LastMovementObject;
 
 	// End : Replication 관련 코드 =============================================================================================
 	
