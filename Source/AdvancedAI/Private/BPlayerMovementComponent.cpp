@@ -275,14 +275,30 @@ void UBPlayerMovementComponent::UpdateSimulatedProxyFromMovementState(float From
 {
 
 	/*
-	 * AutonomousProxy 의 경우 미쳐리된 입력까지 모두 알고 있기 때문에 정확하게 시뮬레이션 할 수 있다.
-	 * RTT / 2 만큼 차이나는 시뮬레이션을 처리하기 위해 보간 방법이 아닌, 다른 작업을 해주지 않아도 될것 같다.
-	 * 보간을 사용하지 않고, 서버에서 받은 상태(MovementState)에서 RTT / 2 만큼 미처리된 입력을 시뮬레이션한다.
-
+	 * SimulatedProxy 의 경우 서버에서 받은 MovementState가 유지될 것이라는 가정하에 시뮬레이션을 진행한다.
+	 * 먼저 RTT / 2 만큼 차이나기 때문에 MovementState를 기반으로 RTT / 2 만큼 시뮬레이션해준다.
+	 * SimulatedProxy의 경우 시뮬레이션 예측이 자주 실패하기 때문에 서버에서 받은 상태와 현재 상태가 동일하지 않을 가능성이 높다.
+	 * 원하는 상태와 동일하지 않을 때 그 차이가 크다면 그냥 텔리포트한다.
+	 * 나머지 경우에는 삼차 스플라인 곡선(삼차 에르미트 스플라인)을 만들어서 다음 상태를 받는 시점에 클라이언트가 예측한 상태로 보간한다.
 	 */
 
-	//===================================
+
+	TargetVelocity = MovementState.Velocity;
+	TargetLocation = MovementState.Tranform.GetLocation();
+	TargetRotation = MovementState.Tranform.GetRotation();
+
+	// 클라이언트로 내려오는 동안 RTT / 2 만큼 지났고, 다음 상태는 RTT / 2 후에 갱신된다고 가정한다.
+	CalculateMovementByDeadReckoning(FromServerToClientTime + FromServerToClientTime);
+
 	/*
+	Spline.TargetLocation = 
+	Spline.StartLocation = ClientStartTransform.GetLocation();
+	Spline.StartDerivative = ClientStartVelocity * VelocityToDerivative();
+	Spline.TargetDerivative = ServerState.Velocity * VelocityToDerivative();
+
+	// 다음 리플리케이션 시점이 RTT / 2 로 가정한다.
+
+
 	ClientTimeBetweenLastUpdates = ClientTimeSinceUpdate;
 	ClientTimeSinceUpdate = 0;
 
@@ -293,7 +309,8 @@ void UBPlayerMovementComponent::UpdateSimulatedProxyFromMovementState(float From
 	}
 	ClientStartVelocity = MovementComponent->GetVelocity();
 
-	GetOwner()->SetActorTransform(ServerState.Tranform);*/
+	GetOwner()->SetActorTransform(ServerState.Tranform);
+	*/
 }
 
 void UBPlayerMovementComponent::CalculateMovementByDeadReckoning(float DeltaTime)
