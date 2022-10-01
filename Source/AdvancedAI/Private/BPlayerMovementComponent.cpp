@@ -5,6 +5,8 @@
 #include "Engine/World.h"
 #include "BPlayer.h"
 #include "GameFramework/GameStateBase.h"
+#include "Net/UnrealNetwork.h"
+
 
 static int32 PrintPlayerMovementComponentVelocity = 1;
 FAutoConsoleVariableRef CVARDebugPrintPlayerMovementComponentVelocity(
@@ -86,54 +88,60 @@ void UBPlayerMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	const float RightMovementFactor = OwnerPlayer->GetRightMovementFactor();
 
 	// if (GetOwnerRole() == ROLE_AutonomousProxy || GetOwner()->GetRemoteRole() == ROLE_SimulatedProxy)
-
+	const ENetRole CurrentActorRole = OwnerPlayer->GetLocalRole();
+	//const ENetRole CurrentActorRemoteRole = OwnerPlayer->GetRemoteRole();
+	
 	// 클라이언트나 서버가 컨트롤하고 있는 폰일 경우
 	if (OwnerPlayer->IsLocallyControlled())
 	{
-
-
 		const AGameStateBase* CurrentGameState = nullptr != GetWorld() ? GetWorld()->GetGameState() : nullptr;
 		if (nullptr == CurrentGameState)
 		{
 			return;
 		}
 
-		//LastMovementObject.SharedWorldTime = CurrentGameState->GetServerWorldTimeSeconds();
-		//LastMovementObject.DeltaTime = DeltaTime;
-		//LastMovementObject.ForwardMovementFactor = ForwardMovementFactor;
-		//LastMovementObject.RightMovementFactor = RightMovementFactor;
-
+		FPlayerMovementObject LastMovementObject;
 		LastMovementObject.Set(CurrentGameState->GetServerWorldTimeSeconds()
 						, DeltaTime
 						, ForwardMovementFactor
 						, RightMovementFactor);
 		
-		SimulateMovementObject(LastMovementObject);
 
 
-		const ENetRole CurrentActorRole = OwnerPlayer->GetLocalRole();
-		const ENetRole CurrentActorRemoteRole = OwnerPlayer->GetRemoteRole();
-
-		// 클라이언트일 경우에만 서버로 보내준다.
-		/*
-		if (CurrentActorRole == ROLE_AutonomousProxy)
-		{
-			UnacknowledgedMoves.Add(LastMove);
-			Server_SendMove(LastMove);
-		}
-
-		// We are the server and in control of the pawn.
-		if (GetOwner()->GetRemoteRole() == ROLE_SimulatedProxy)
-		{
-			UpdateServerState(LastMove);
-		}
-
-		if (GetOwnerRole() == ROLE_SimulatedProxy)
-		{
-			ClientTick(DeltaTime);
-		}
+		/**
+		 * 클라이언트에서 컨트롤되고 있는 경우, 현재 입력을 클라이언트에서 시뮬레이션하고, 입력을 서버로 보내주고 입력 리스트를 관리한다.
+		 * 이후에 클라이언트의 입력은 서버에서도 시뮬레이션되고, MovementState가 리플리케이션된다.
+		 *
+		 * 서버에서 컨트롤되고 있는 경우 바로 시뮬레이션을 진행하고, MovementState를 리플리케이션한다.
+		 * (앞에서 현재 시스템에서 컨트롤된다는 것을 체크했기 때문에 Role만 ROLE_Authority임을 확인하면 서버에서 컨트롤되고 있는 폰임을 알 수 있다.)
 		*/
+
+		switch (CurrentActorRole)
+		{
+		case ROLE_AutonomousProxy:
+		{
+			PendingMovementObjects.Add(LastMovementObject);
+			ServerMove(LastMovementObject);
+		}
+		break;
+		case ROLE_Authority:
+		{
+			UpdateMovementState(LastMovementObject);
+		}
+		break;
+		}
 	}
+	else if(CurrentActorRole == ROLE_SimulatedProxy) // 시뮬레이션 중인 폰이라면 서버에서 받은 MovementState를 참고하여 보간을 진행한다.
+	{
+		ClientTick(DeltaTime);
+	}
+}
+
+void UBPlayerMovementComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UBPlayerMovementComponent, MovementState);
 }
 
 /*
@@ -160,7 +168,7 @@ void UBPlayerMovementComponent::SetMaxVelocityFactor(const float NewMaxVelocityF
 	RefreshMovementVariable();
 }
 
-FVector UBPlayerMovementComponent::GetPlayerVelocity() const
+FVector UBPlayerMovementComponent::GetVelocity() const
 {
 	return Velocity;
 }
@@ -173,32 +181,100 @@ float UBPlayerMovementComponent::GetCurrentYaw() const
 
 // Begin : Replication 관련 코드 =============================================================================================
 
-/*
-void UBPlayerMovementComponent::ServerMove_Implementation(FPlayerMovementObject MovementObject)
-{
 
+void UBPlayerMovementComponent::ServerMove_Implementation(const FPlayerMovementObject& MovementObject)
+{
+	ClientSimulatedTime += MovementObject.DeltaTime;
+
+	SimulateMovementObject(MovementObject);
+	UpdateMovementState(MovementObject);
 }
 
-bool UBPlayerMovementComponent::ServerMove_Validate(FPlayerMovementObject MovementObject)
+bool UBPlayerMovementComponent::ServerMove_Validate(const FPlayerMovementObject& MovementObject)
 {
-	return true;
-}
-*/
-
-void UBPlayerMovementComponent::SimulateMovementObject(const FPlayerMovementObject& MovementObject)
-{
-	const float DeltaTime = MovementObject.DeltaTime;
-	const float ForwardMovementFactor = MovementObject.ForwardMovementFactor;
-	const float RightMovementFactor = MovementObject.RightMovementFactor;
-
-	if (PrintPlayerMovementComponentVelocity)
+	if (false == MovementObject.IsValid())
 	{
-		B_LOG_DEV("%.1f, %.1f", ForwardMovementFactor, RightMovementFactor);
+		B_ASSERT_DEV(false, "클라이언트 키보드 입력 값이 올바르지 않습니다. 강제 로그아웃 처리합니다.")
+		return false;
 	}
 
-	UpdateVelocity(ForwardMovementFactor, RightMovementFactor, DeltaTime);
-	UpdateTransform(ForwardMovementFactor, RightMovementFactor, DeltaTime);
+	const float CurrentClientSimulatedTime = ClientSimulatedTime + MovementObject.DeltaTime;
+	const AGameStateBase* CurrentGameState = nullptr != GetWorld() ? GetWorld()->GetGameState() : nullptr;
+	if (nullptr == CurrentGameState)
+	{
+		B_ASSERT_DEV(false, "서버에서 시뮬레이션 시간을 받아올 수 없습니다. 일단 강제 로그아웃 처리합니다.")
+		return false;
+	}
+
+	const float ServerSimulatedTime = CurrentGameState->GetServerWorldTimeSeconds();
+	if (ServerSimulatedTime < CurrentClientSimulatedTime)
+	{
+		B_ASSERT_DEV(false, "클라이언트의 시뮬레이션 진행 시간이 비정상입니다. 강제 로그아웃 처리합니다.")
+		return false;
+	}
+
+	return true;
 }
+
+void UBPlayerMovementComponent::UpdateMovementState(const FPlayerMovementObject& MovementObject)
+{
+	MovementState.LastMovementObjectSharedWorldTime = MovementObject.SharedWorldTime;
+	MovementState.Tranform = GetOwner()->GetActorTransform();
+	MovementState.Velocity = GetVelocity();
+}
+
+void UBPlayerMovementComponent::RemoveProcessedMovementObjects(float LastMovementObjectSharedWorldTime)
+{
+	TArray<FPlayerMovementObject> NewPendingMovementObjects;
+
+	const int32 MovementObjectCount = PendingMovementObjects.Num();
+	int32 CurrentMovementObjectIndex = 0;
+
+	for (; CurrentMovementObjectIndex < MovementObjectCount; ++CurrentMovementObjectIndex)
+	{
+		if (PendingMovementObjects[CurrentMovementObjectIndex].SharedWorldTime > LastMovementObjectSharedWorldTime)
+		{
+			break;
+		}
+	}
+
+	for (; CurrentMovementObjectIndex < MovementObjectCount; ++CurrentMovementObjectIndex)
+	{
+		NewPendingMovementObjects.Add(PendingMovementObjects[CurrentMovementObjectIndex]);
+	}
+
+	PendingMovementObjects = NewPendingMovementObjects;
+}
+
+void UBPlayerMovementComponent::OnRep_MovementState()
+{
+	const ENetRole CurrentActorRole = GetOwnerRole();
+	
+	switch (CurrentActorRole)
+	{
+	case ROLE_SimulatedProxy:
+	{
+		
+	}
+	break;
+	case ROLE_AutonomousProxy:
+	{
+		// 서버에서도 처리된 입력은 삭제한다.
+		RemoveProcessedMovementObjects(MovementState.LastMovementObjectSharedWorldTime);
+		
+		// 서버에서 받은 상태를 바로 적용하고, 나머지 미처리된 입력을 시뮬레이션한다.
+		GetOwner()->SetActorTransform(MovementState.Tranform);
+		SetVelocity(MovementState.Velocity);
+
+		for (const FPlayerMovementObject& MovementObject : PendingMovementObjects)
+		{
+			SimulateMovementObject(MovementObject);
+		}
+	}
+	break;
+	}
+}
+
 
 // End : Replication 관련 코드 =============================================================================================
 
@@ -242,6 +318,27 @@ float UBPlayerMovementComponent::GetFrictionResistanceScalar() const
 	// 마찰력 = (속도와 반대 방향) * 수직항력 * 마찰계수 // 수직항력의 경우 지면을 수평으로 간주하고 계산한다. (M * G)
 	const float NormalForce = DefaultMass * DefaultGravityScalar;
 	return FrictionCoefficient * NormalForce;
+}
+
+void UBPlayerMovementComponent::SimulateMovementObject(const FPlayerMovementObject& MovementObject)
+{
+	const float DeltaTime = MovementObject.DeltaTime;
+	const float ForwardMovementFactor = MovementObject.ForwardMovementFactor;
+	const float RightMovementFactor = MovementObject.RightMovementFactor;
+
+	if (PrintPlayerMovementComponentVelocity)
+	{
+		B_LOG_DEV("%.1f, %.1f", ForwardMovementFactor, RightMovementFactor);
+	}
+
+	UpdateVelocity(ForwardMovementFactor, RightMovementFactor, DeltaTime);
+	UpdateTransform(ForwardMovementFactor, RightMovementFactor, DeltaTime);
+}
+
+void UBPlayerMovementComponent::SetVelocity(const FVector& NewVelocity)
+{
+	// 추가 검증 필요하면 추가
+	Velocity = NewVelocity;
 }
 
 void UBPlayerMovementComponent::UpdateVelocity(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime)

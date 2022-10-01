@@ -25,19 +25,21 @@ struct FPlayerMovementObject
 
 	void Set(float InputSharedWorldTime, float InputDeltaTime, float InputForwardMovementFactor, float InputRightMovementFactor)
 	{
-		this->SharedWorldTime = InputSharedWorldTime;
-		this->DeltaTime = InputDeltaTime;
-		this->ForwardMovementFactor = InputForwardMovementFactor;
-		this->RightMovementFactor = InputRightMovementFactor;
+		SharedWorldTime = InputSharedWorldTime;
+		DeltaTime = InputDeltaTime;
+		ForwardMovementFactor = InputForwardMovementFactor;
+		RightMovementFactor = InputRightMovementFactor;
 	}
 
+	/** 입력 값 검증을 통한 치트 방지 */
 	bool IsValid() const
 	{
 		return (1 >= FMath::Abs(ForwardMovementFactor)) 
 			&& (1 >= FMath::Abs(RightMovementFactor));
 	}
 };
-/*
+
+
 USTRUCT()
 struct FPlayerMovementState
 {
@@ -50,8 +52,13 @@ struct FPlayerMovementState
 	FVector Velocity;
 
 	UPROPERTY()
-	FPlayerMovementObject LastMovementObject;
+	float LastMovementObjectSharedWorldTime;
+
+	/** 서버에서 이 패킷을 보낸 시각, 1/2 RTT를 계산하여 조금 더 정확한 시뮬레이션을 하기 위해 사용된다. */
+	UPROPERTY()
+	float DepartureTime;
 };
+
 
 struct FHermiteCubicSpline
 {
@@ -66,7 +73,7 @@ struct FHermiteCubicSpline
 		return FMath::CubicInterpDerivative(StartLocation, StartDerivative, TargetLocation, TargetDerivative, LerpRatio);
 	}
 };
-*/
+
 
 UCLASS(/*ClassGroup = (Custom), meta = (BlueprintSpawnableComponent)*/)
 class ADVANCEDAI_API UBPlayerMovementComponent : public UActorComponent
@@ -81,39 +88,53 @@ protected:
 
 public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 
 	void SetMaxVelocityFactor(const float NewMaxVelocityFactor);
 
 	UFUNCTION(BlueprintCallable)
-	FVector GetPlayerVelocity() const;
+	FVector GetVelocity() const;
 
 	UFUNCTION(BlueprintCallable)
 	float GetCurrentYaw() const;
 
 
-
-private:
 	// Begin : Replication 관련 코드 =============================================================================================
+private:
 
-	//UFUNCTION(Server, Reliable, WithValidation)
-	//void ServerMove(FPlayerMovementObject MovementObject);
-
-
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerMove(const FPlayerMovementObject& MovementObject);
 
 	// bool CreateMovementObject(float DeltaTime, FPlayerMovementObject& NewMovementObject) const;
 
-	
-	void SimulateMovementObject(const FPlayerMovementObject& MovementObject);
+	void UpdateMovementState(const FPlayerMovementObject& MovementObject);
+
+	/** 서버에서 처리된 MovementObject를 삭제하는 함수 */
+	void RemoveProcessedMovementObjects(float LastMovementObjectSharedWorldTime);
 
 
+	UFUNCTION()
+	void OnRep_MovementState();
 
+	/** 서버에서 리플리케이션되는 이동 정보 */
+	UPROPERTY(ReplicatedUsing = OnRep_MovementState)
+	FPlayerMovementState MovementState;
 
-	/** 플레이어의 이동 입력 */
-	FPlayerMovementObject LastMovementObject;
+	/** 
+	 * 폰을 컨트롤하는 곳에서 정확한 시뮬레이션을 하기 위해 플레이어의 최신 이동 입력들을 저장하고 있다.
+	 * 서버에서 처리되는대로 삭제된다. */
+	TArray<FPlayerMovementObject> PendingMovementObjects;
+
+	/** DeltaTime을 사용한 치트 방지 */
+	float ClientSimulatedTime;
 
 	// End : Replication 관련 코드 =============================================================================================
 	
 	// Begin : Transform, Physics 관련 코드 ======================================================================================
+private:
+
+	/// 이동 관련
 
 	void RefreshMovementVariable();
 
@@ -123,6 +144,8 @@ private:
 	float GetAirResistanceScalar(const float VelocityScalar /* Speed */) const;
 	float GetFrictionResistanceScalar() const;
 
+	void SimulateMovementObject(const FPlayerMovementObject& MovementObject);
+	void SetVelocity(const FVector& NewVelocity);
 	void UpdateVelocity(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime);
 	void ApplyResistanceToVelocity(float DeltaTime);
 	void ApplyInputToVelocity(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime);
@@ -168,7 +191,8 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	float DefaultGravityScalar;
 
-	/** 회전 관련 */
+
+	/// 회전 관련
 
 	/** cm */
 	UPROPERTY(EditDefaultsOnly)
@@ -178,5 +202,4 @@ private:
 	float CurrentYaw;
 
 	// End : Transform, Physics 관련 코드 ======================================================================================
-
 };
