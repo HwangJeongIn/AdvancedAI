@@ -6,6 +6,38 @@
 #include "Components/ActorComponent.h"
 #include "BPlayerMovementComponent.generated.h"
 
+USTRUCT()
+struct FPlayerMoveObject
+{
+	GENERATED_USTRUCT_BODY()
+
+	UPROPERTY()
+	float SharedWorldTime;
+
+	UPROPERTY()
+	float DeltaTime;
+
+	UPROPERTY()
+	float ForwardMovementFactor;
+
+	UPROPERTY()
+	float RightMovementFactor;
+
+	void Set(float InputSharedWorldTime, float InputDeltaTime, float InputForwardMovementFactor, float InputRightMovementFactor)
+	{
+		this->SharedWorldTime = InputSharedWorldTime;
+		this->DeltaTime = InputDeltaTime;
+		this->ForwardMovementFactor = InputForwardMovementFactor;
+		this->RightMovementFactor = InputRightMovementFactor;
+	}
+
+	bool IsValid() const
+	{
+		return (1 >= FMath::Abs(ForwardMovementFactor)) 
+			&& (1 >= FMath::Abs(RightMovementFactor));
+	}
+};
+
 
 UCLASS(/*ClassGroup = (Custom), meta = (BlueprintSpawnableComponent)*/)
 class ADVANCEDAI_API UBPlayerMovementComponent : public UActorComponent
@@ -29,27 +61,38 @@ public:
 	UFUNCTION(BlueprintCallable)
 	float GetCurrentYaw() const;
 
+
+
+private:
+	// Begin : Replication 관련 코드 =============================================================================================
+
+	// bool CreateMoveObject(float DeltaTime, FPlayerMoveObject& NewMoveObject) const;
+	void SimulateMoveObject(const FPlayerMoveObject& MoveObject);
+
+
+	/** 플레이어의 이동 입력 */
+	FPlayerMoveObject LastMoveObject;
+
+	// End : Replication 관련 코드 =============================================================================================
+	
+	// Begin : Transform, Physics 관련 코드 ======================================================================================
+
+	void RefreshMovementVariable();
+
 	float GetDeltaTranslationScalar(const FVector& CurrentVelocity, float DeltaTime) const;
 
 	float GetResistanceScalar(const float VelocityScalar /* Speed */) const;
 	float GetAirResistanceScalar(const float VelocityScalar /* Speed */) const;
 	float GetFrictionResistanceScalar() const;
 
-private:
-
-	void RefreshMovingVariable();
-
 	void UpdateVelocity(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime);
 	void ApplyResistanceToVelocity(float DeltaTime);
 	void ApplyInputToVelocity(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime);
-
 
 	float ConvertToControlRotationRange(float angle) const;
 	void UpdateTransform(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime);
 	void UpdateRotation(float DeltaTranslationScalar);
 	void UpdateLocation(float DeltaTranslationScalar);
-
-	// 속도 관련 계산 ======================================================================================
 
 	UPROPERTY(EditDefaultsOnly)
 	float MaxVelocityScalar;
@@ -72,7 +115,7 @@ private:
 	 * N = ㎏ × (m/s^2)
 	 * cN = ㎏ × (cm/s^2) */
 	UPROPERTY(VisibleAnywhere)
-	float MovingForceScalar;
+	float MovementForceScalar;
 
 	UPROPERTY(VisibleAnywhere)
 	float AccelerationScalar;
@@ -87,7 +130,7 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	float DefaultGravityScalar;
 
-	// 회전 관련 계산 ======================================================================================
+	/** 회전 관련 */
 
 	/** cm */
 	UPROPERTY(EditDefaultsOnly)
@@ -96,5 +139,6 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	float CurrentYaw;
 
+	// End : Transform, Physics 관련 코드 ======================================================================================
 
 };

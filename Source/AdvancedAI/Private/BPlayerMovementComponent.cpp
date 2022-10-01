@@ -3,7 +3,8 @@
 
 #include "BPlayerMovementComponent.h"
 #include "Engine/World.h"
-#include "BPlayer.h"	
+#include "BPlayer.h"
+#include "GameFramework/GameStateBase.h"
 
 static int32 PrintPlayerMovementComponentVelocity = 1;
 FAutoConsoleVariableRef CVARDebugPrintPlayerMovementComponentVelocity(
@@ -22,8 +23,6 @@ FAutoConsoleVariableRef CVARDebugPrintPlayerMovementComponentRotation(
 
 UBPlayerMovementComponent::UBPlayerMovementComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 
 	DefaultMass = 100;					// 100kg
@@ -32,7 +31,7 @@ UBPlayerMovementComponent::UBPlayerMovementComponent()
 	MaxVelocityScalar = MaxVelocityScalar * CurrentMaxVelocityFactor;
 
 	// MaxVelocity 기준으로 계산한다.
-	// MovingForceScalar = 100000;	// 100000cN (㎏ × (cm/s^2))cN
+	// MovementForceScalar = 100000;	// 100000cN (㎏ × (cm/s^2))cN
 	// Acceleration : 1000 (cm/s^2) => 10 (m/s^2)
 
 	MinTurningRadius = 100;				// 100 cm
@@ -69,15 +68,16 @@ void UBPlayerMovementComponent::BeginPlay()
 		CurrentYaw += 360.0f;
 	}
 
-	RefreshMovingVariable();
+	RefreshMovementVariable();
 }
 
 void UBPlayerMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+
 	ABPlayer* OwnerPlayer = Cast<ABPlayer>(GetOwner());
-	if (!OwnerPlayer)
+	if (nullptr == OwnerPlayer)
 	{
 		return;
 	}
@@ -85,19 +85,52 @@ void UBPlayerMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	const float ForwardMovementFactor = OwnerPlayer->GetForwardMovementFactor();
 	const float RightMovementFactor = OwnerPlayer->GetRightMovementFactor();
 
-	if (PrintPlayerMovementComponentVelocity)
+	// if (GetOwnerRole() == ROLE_AutonomousProxy || GetOwner()->GetRemoteRole() == ROLE_SimulatedProxy)
+	// 클라이언트나 서버가 컨트롤하고 있는 폰일 경우
+	if (OwnerPlayer->IsLocallyControlled())
 	{
-		B_LOG_DEV("%.1f, %.1f", ForwardMovementFactor, RightMovementFactor);
+		const AGameStateBase* CurrentGameState = nullptr != GetWorld() ? GetWorld()->GetGameState() : nullptr;
+		if (nullptr == CurrentGameState)
+		{
+			return;
+		}
+
+		//LastMoveObject.SharedWorldTime = CurrentGameState->GetServerWorldTimeSeconds();
+		//LastMoveObject.DeltaTime = DeltaTime;
+		//LastMoveObject.ForwardMovementFactor = ForwardMovementFactor;
+		//LastMoveObject.RightMovementFactor = RightMovementFactor;
+
+		LastMoveObject.Set(CurrentGameState->GetServerWorldTimeSeconds()
+						, DeltaTime
+						, ForwardMovementFactor
+						, RightMovementFactor);
+		
+		SimulateMoveObject(LastMoveObject);
+	}
+}
+
+/*
+bool UBPlayerMovementComponent::CreateMoveObject(float DeltaTime, FPlayerMoveObject& NewMoveObject) const
+{
+	const AGameStateBase* CurrentGameState = nullptr != GetWorld() ? GetWorld()->GetGameState() : nullptr;
+	if (nullptr == CurrentGameState)
+	{
+		return false;
 	}
 
-	UpdateVelocity(ForwardMovementFactor, RightMovementFactor, DeltaTime);
-	UpdateTransform(ForwardMovementFactor, RightMovementFactor, DeltaTime);
+	NewMoveObject.DeltaTime = DeltaTime;
+	NewMoveObject.SharedTime = CurrentGameState->GetServerWorldTimeSeconds();
+
+	NewMoveObject.SteeringThrow = SteeringThrow;
+	NewMoveObject.Throttle = Throttle;
+	return true;
 }
+*/
 
 void UBPlayerMovementComponent::SetMaxVelocityFactor(const float NewMaxVelocityFactor)
 {
 	CurrentMaxVelocityFactor = NewMaxVelocityFactor;
-	RefreshMovingVariable();
+	RefreshMovementVariable();
 }
 
 FVector UBPlayerMovementComponent::GetPlayerVelocity() const
@@ -108,6 +141,38 @@ FVector UBPlayerMovementComponent::GetPlayerVelocity() const
 float UBPlayerMovementComponent::GetCurrentYaw() const
 {
 	return CurrentYaw;
+}
+
+
+// Begin : Replication 관련 코드 =============================================================================================
+
+
+void UBPlayerMovementComponent::SimulateMoveObject(const FPlayerMoveObject& MoveObject)
+{
+	const float DeltaTime = MoveObject.DeltaTime;
+	const float ForwardMovementFactor = MoveObject.ForwardMovementFactor;
+	const float RightMovementFactor = MoveObject.RightMovementFactor;
+
+	if (PrintPlayerMovementComponentVelocity)
+	{
+		B_LOG_DEV("%.1f, %.1f", ForwardMovementFactor, RightMovementFactor);
+	}
+
+	UpdateVelocity(ForwardMovementFactor, RightMovementFactor, DeltaTime);
+	UpdateTransform(ForwardMovementFactor, RightMovementFactor, DeltaTime);
+}
+
+// End : Replication 관련 코드 =============================================================================================
+
+// Begin : Transform, Physics 관련 코드 ======================================================================================
+
+void UBPlayerMovementComponent::RefreshMovementVariable()
+{
+	CurrentMaxVelocityScalar = MaxVelocityScalar * CurrentMaxVelocityFactor;
+
+	// 최대 속력일 때 저항하는 힘과 같은 힘을 줘야한다.
+	MovementForceScalar = GetResistanceScalar(CurrentMaxVelocityScalar);
+	AccelerationScalar = MovementForceScalar / DefaultMass;
 }
 
 float UBPlayerMovementComponent::GetDeltaTranslationScalar(const FVector& CurrentVelocity, float DeltaTime) const
@@ -139,15 +204,6 @@ float UBPlayerMovementComponent::GetFrictionResistanceScalar() const
 	// 마찰력 = (속도와 반대 방향) * 수직항력 * 마찰계수 // 수직항력의 경우 지면을 수평으로 간주하고 계산한다. (M * G)
 	const float NormalForce = DefaultMass * DefaultGravityScalar;
 	return FrictionCoefficient * NormalForce;
-}
-
-void UBPlayerMovementComponent::RefreshMovingVariable()
-{
-	CurrentMaxVelocityScalar = MaxVelocityScalar * CurrentMaxVelocityFactor;
-
-	// 최대 속력일 때 저항하는 힘과 같은 힘을 줘야한다.
-	MovingForceScalar = GetResistanceScalar(CurrentMaxVelocityScalar);
-	AccelerationScalar = MovingForceScalar / DefaultMass;
 }
 
 void UBPlayerMovementComponent::UpdateVelocity(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime)
@@ -212,13 +268,13 @@ void UBPlayerMovementComponent::ApplyInputToVelocity(float ForwardMovementFactor
 	const FQuat ActorRotation = GetOwner()->GetActorQuat();
 	const FVector InputWorldDirection = ActorRotation.RotateVector(InputRelativeDirection);
 
-	// AccelerationScalar = MovingForceScalar / DefaultMass;
+	// AccelerationScalar = MovementForceScalar / DefaultMass;
 	const FVector InputDeltaVelocity = InputWorldDirection * AccelerationScalar * DeltaTime;
 	Velocity = Velocity + InputDeltaVelocity;
 
 	/*
 	const FQuat InputWorldDirectionRotation = InputRelativeDirectionRotation * (-VelocityRotation);
-	// AccelerationScalar = MovingForceScalar / DefaultMass
+	// AccelerationScalar = MovementForceScalar / DefaultMass
 	*/
 	if (PrintPlayerMovementComponentVelocity)
 	{
@@ -342,3 +398,4 @@ void UBPlayerMovementComponent::UpdateLocation(float DeltaTranslationScalar)
 	*/
 }
 
+// End : Transform, Physics 관련 코드 ======================================================================================
