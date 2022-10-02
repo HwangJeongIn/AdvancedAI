@@ -157,6 +157,9 @@ private:
 	/** 클라이언트에서 서버로부터 MovementState를 받았을 때, SimulatedProxy 을 시뮬레이션하는 함수 */
 	void UpdateSimulatedProxyFromMovementState(float FromServerToClientTime /* RTT / 2 */);
 
+	/** 클라이언트에서의 상태가 서버와 많이 다를 때 강제로 서버 상태에 맞추는 함수 */
+	void SetTargetMovementBySpline(FHermiteCubicSpline& Spline);
+
 	/** 
 	 * 클라이언트에서 SimulatedProxy 을 시뮬레이션할 때, 현재 움직임을 기반으로 미래의 움직임을 예측하는 함수
 	 * 간단히 해당 움직임을 유지할 것이라고 예측한다. */
@@ -166,11 +169,6 @@ private:
 	/** 클라이언트에서 Role이 ROLE_SimulatedProxy 일 때, 매 프레임 보간하는 함수 */
 	void InterpolateFromClient(float DeltaTime);
 
-	/** 
-	 * 클라이언트에서 SimulatedProxy 을 시뮬레이션할 때, 보간하는 용도로 사용되는 변수
-	 * 시간에 따라 Location은 계속해서 변한다.
-	 
-	 */
 
 	FHermiteCubicSpline CubicSpline;
 

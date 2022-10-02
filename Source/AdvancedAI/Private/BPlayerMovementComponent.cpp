@@ -4,6 +4,7 @@
 #include "BPlayerMovementComponent.h"
 #include "Engine/World.h"
 #include "BPlayer.h"
+#include "DrawDebugHelpers.h"
 #include "GameFramework/GameStateBase.h"
 #include "Net/UnrealNetwork.h"
 
@@ -92,6 +93,8 @@ void UBPlayerMovementComponent::BeginPlay()
 	}
 
 	RefreshMovementVariable();
+	const FVector ActorLocation = Owner->GetActorLocation();
+	CubicSpline.Set(ActorLocation, FVector::ZeroVector, ActorLocation, FVector::ZeroVector);
 }
 
 void UBPlayerMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -295,7 +298,14 @@ void UBPlayerMovementComponent::OnRep_MovementState()
 	float ClientSimulatedTime = 0.0f;
 	if (GetSharedWorldTime(ClientSimulatedTime))
 	{
-		FromServerToClientTime = ClientSimulatedTime - MovementState.DepartureTime;
+		//FromServerToClientTime = ClientSimulatedTime - MovementState.DepartureTime;
+		FromServerToClientTime = (ClientSimulatedTime - MovementState.LastMovementObjectSharedWorldTime) / 2;
+		
+		//if (PrintPlayerMovementComponentClientInterpolation)
+		//{
+		//	B_LOG_DEV("LastMovementObjectSharedWorldTime : %.6f", MovementState.LastMovementObjectSharedWorldTime);
+		//	B_LOG_DEV("ClientSimulatedTime : %.6f", ClientSimulatedTime);
+		//}
 	}
 
 	const ENetRole CurrentActorRole = GetOwnerRole();
@@ -314,7 +324,9 @@ void UBPlayerMovementComponent::OnRep_MovementState()
 	}
 }
 
-void UBPlayerMovementComponent::UpdateSimulatedProxyFromMovementState(float FromServerToClientTime /* RTT / 2 */)
+
+
+void UBPlayerMovementComponent::UpdateSimulatedProxyFromMovementState(float FromServerToClientTime2 /* RTT / 2 */)
 {
 	if (PrintPlayerMovementComponentClientInterpolation)
 	{
@@ -330,34 +342,59 @@ void UBPlayerMovementComponent::UpdateSimulatedProxyFromMovementState(float From
 
 	AActor* Owner = GetOwner();
 
+	FVector CurrentVelocity = GetVelocity();
+	FVector CurrentLocation = GetOwner()->GetActorLocation();
+
+	// 이전에 보간을 진행하던 목표 상태과 현재 상태에서 위치가 100cm 이상 차이나면, 이전 목표 상태로 강제로 세팅한다.
+	if (10000.0f < (CurrentLocation - CubicSpline.TargetLocation).SizeSquared())
+	{
+		SetTargetMovementBySpline(CubicSpline);
+		Owner->SetActorRotation(TargetRotation);
+	}
+
 	StartRotation = Owner->GetActorQuat();
 	TargetRotation = MovementState.Tranform.GetRotation();
 	FVector TargetVelocity = MovementState.Velocity;
 	FVector TargetLocation = MovementState.Tranform.GetLocation();
 
 	// 조금 더 생각할 필요가 있다.
-	const float ExpectedNextUpdateInterval = FromServerToClientTime;
+	const float FromServerToClientTime = CurrentInterpolationTime / 2;
+	//const float ExpectedNextUpdateInterval = CurrentInterpolationTime;
 
-	// 클라이언트로 내려오는 동안 RTT / 2 만큼 지났고, 다음 상태는 RTT / 2 후에 갱신된다고 가정한다.
-	CalculateMovementByDeadReckoning(FromServerToClientTime + ExpectedNextUpdateInterval,
+	// 클라이언트로 내려오는 동안 RTT / 2 만큼 지났고, 다음 상태는 현재 패킷이 도착하기까지 걸린 시간과 비슷하게 걸린다고 가정한다.
+	CalculateMovementByDeadReckoning(FromServerToClientTime + CurrentInterpolationTime,
 		TargetLocation, TargetVelocity);
 
-	CubicSpline.Set(GetOwner()->GetActorLocation(), GetVelocity(),
+	CubicSpline.Set(CurrentLocation, CurrentVelocity,
 		TargetLocation, TargetVelocity);
 
-	InterpolationCompletionTime = ExpectedNextUpdateInterval;
+	InterpolationCompletionTime = CurrentInterpolationTime;
 	CurrentInterpolationTime = 0.0f;
 	//InterpolationRatio = 0.0f;
 
 	if (PrintPlayerMovementComponentClientInterpolation)
 	{
-		B_LOG_DEV("InterpolationCompletionTime : %.1f", InterpolationCompletionTime);
+		B_LOG_DEV("InterpolationCompletionTime : %.6f", InterpolationCompletionTime);
 		B_LOG_DEV("StartLocation : %.1f, %.1f, %.1f", CubicSpline.StartLocation.X, CubicSpline.StartLocation.Y, CubicSpline.StartLocation.Z);
 		B_LOG_DEV("TargetLocation : %.1f, %.1f, %.1f", CubicSpline.TargetLocation.X, CubicSpline.TargetLocation.Y, CubicSpline.TargetLocation.Z);
 
 		B_LOG_DEV("StartVelocity : %.1f, %.1f, %.1f", CubicSpline.StartVelocity.X, CubicSpline.StartVelocity.Y, CubicSpline.StartVelocity.Z);
 		B_LOG_DEV("TargetVelocity : %.1f, %.1f, %.1f", CubicSpline.TargetVelocity.X, CubicSpline.TargetVelocity.Y, CubicSpline.TargetVelocity.Z);
+
+		FVector SplineTempLocation;
+		for (float i = 0; i < 10; ++i)
+		{
+			SplineTempLocation = CubicSpline.InterpolateLocation(0.1 * i);
+
+			DrawDebugSphere(GetWorld(), SplineTempLocation, 20, 12, FColor::Red, false, 2.0f, 0, 1.0f);
+		}
 	}
+}
+
+void UBPlayerMovementComponent::SetTargetMovementBySpline(FHermiteCubicSpline& Spline)
+{
+	GetOwner()->SetActorLocation(Spline.TargetLocation);
+	SetVelocity(Spline.TargetVelocity);
 }
 
 void UBPlayerMovementComponent::CalculateMovementByDeadReckoning(float ElapsedTime,
@@ -371,11 +408,12 @@ void UBPlayerMovementComponent::CalculateMovementByDeadReckoning(float ElapsedTi
 void UBPlayerMovementComponent::InterpolateFromClient(float DeltaTime)
 {
 	//B_LOG_DEV("InterpolateFromClient => DeltaTime : %.1f", DeltaTime);
+
+	CurrentInterpolationTime += DeltaTime;
+
 	AActor* OwnerActor = GetOwner();
 	if (0.0f < InterpolationCompletionTime) // 보간중인 상태
 	{
-		CurrentInterpolationTime += DeltaTime;
-
 		const float InterpolationRatio = FMath::Clamp(CurrentInterpolationTime / InterpolationCompletionTime, 0.0f, 1.0f);
 		if (1.0f == InterpolationRatio)
 		{
