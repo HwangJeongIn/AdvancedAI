@@ -4,6 +4,7 @@
 #include "BPlayerMovementComponent.h"
 #include "Engine/World.h"
 #include "BPlayer.h"
+#include "BPlayerController.h"
 #include "DrawDebugHelpers.h"
 #include "GameFramework/GameStateBase.h"
 #include "Net/UnrealNetwork.h"
@@ -295,17 +296,14 @@ void UBPlayerMovementComponent::OnRep_MovementState()
 
 	 /** RTT / 2 */
 	float FromServerToClientTime = 0.0f;
-	float ClientSimulatedTime = 0.0f;
-	if (GetSharedWorldTime(ClientSimulatedTime))
+	ABPlayer* CurrentPlayer = Cast<ABPlayer>(GetOwner());
+	if (CurrentPlayer)
 	{
-		//FromServerToClientTime = ClientSimulatedTime - MovementState.DepartureTime;
-		FromServerToClientTime = (ClientSimulatedTime - MovementState.LastMovementObjectSharedWorldTime) / 2;
-		
-		//if (PrintPlayerMovementComponentClientInterpolation)
-		//{
-		//	B_LOG_DEV("LastMovementObjectSharedWorldTime : %.6f", MovementState.LastMovementObjectSharedWorldTime);
-		//	B_LOG_DEV("ClientSimulatedTime : %.6f", ClientSimulatedTime);
-		//}
+		ABPlayerController* CurrentPlayerController = Cast<ABPlayerController>(CurrentPlayer->GetController());
+		if (CurrentPlayerController)
+		{
+			FromServerToClientTime = CurrentPlayerController->GetRoundTripTimeHalf();
+		}
 	}
 
 	const ENetRole CurrentActorRole = GetOwnerRole();
@@ -326,7 +324,7 @@ void UBPlayerMovementComponent::OnRep_MovementState()
 
 
 
-void UBPlayerMovementComponent::UpdateSimulatedProxyFromMovementState(float FromServerToClientTime2 /* RTT / 2 */)
+void UBPlayerMovementComponent::UpdateSimulatedProxyFromMovementState(float FromServerToClientTime /* RTT / 2 */)
 {
 	if (PrintPlayerMovementComponentClientInterpolation)
 	{
@@ -357,12 +355,9 @@ void UBPlayerMovementComponent::UpdateSimulatedProxyFromMovementState(float From
 	FVector TargetVelocity = MovementState.Velocity;
 	FVector TargetLocation = MovementState.Tranform.GetLocation();
 
-	// 조금 더 생각할 필요가 있다.
-	const float FromServerToClientTime = CurrentInterpolationTime / 2;
-	//const float ExpectedNextUpdateInterval = CurrentInterpolationTime;
-
-	// 클라이언트로 내려오는 동안 RTT / 2 만큼 지났고, 다음 상태는 현재 패킷이 도착하기까지 걸린 시간과 비슷하게 걸린다고 가정한다.
-	CalculateMovementByDeadReckoning(FromServerToClientTime + CurrentInterpolationTime,
+	// RTT / 2 를 사용하지 않고 과거의 주기로 미래를 예측해서 시뮬레이션한다.
+	// 다음 상태는 현재 패킷이 도착하기까지 걸린 시간과 비슷하게 걸린다고 가정한다.
+	CalculateMovementByDeadReckoning(/*FromServerToClientTime +*/ CurrentInterpolationTime,
 		TargetLocation, TargetVelocity);
 
 	CubicSpline.Set(CurrentLocation, CurrentVelocity,
