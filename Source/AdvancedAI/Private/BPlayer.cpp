@@ -13,6 +13,11 @@
 ABPlayer::ABPlayer()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	SetReplicates(true);
+	SetReplicateMovement(false);
+
+	NetUpdateFrequency = 1.0f;
+	MinNetUpdateFrequency = 1.0f;
 
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationRoll = false;
@@ -28,6 +33,7 @@ ABPlayer::ABPlayer()
 	CapsuleComp->SetShouldUpdatePhysicsVolume(true);
 	CapsuleComp->SetCanEverAffectNavigation(false);
 	CapsuleComp->bDynamicObstacle = true;
+
 	RootComponent = CapsuleComp;
 
 	MeshComp = CreateOptionalDefaultSubobject<USkeletalMeshComponent>("MeshComp");
@@ -45,10 +51,15 @@ ABPlayer::ABPlayer()
 		MeshComp->SetCollisionProfileName(MeshCollisionProfileName);
 		MeshComp->SetGenerateOverlapEvents(false);
 		MeshComp->SetCanEverAffectNavigation(false);
+
+		MeshComp->SetRelativeLocation(FVector(0.0f, 0.0f, -88.0f));
+		MeshComp->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
 	}
 
 	SpringArmComp = CreateDefaultSubobject<USpringArmComponent>("SpringArmComp");
 	SpringArmComp->bUsePawnControlRotation = true;
+	SpringArmComp->SetRelativeLocation(FVector(0.0f, 0.0f, 80.0f));
+	SpringArmComp->TargetArmLength = 600.0f;
 	SpringArmComp->SetupAttachment(RootComponent);
 
 	// We control the rotation of spring arm with pawn control rotation already, this disables a subtle side effect

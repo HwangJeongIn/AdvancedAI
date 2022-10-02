@@ -22,10 +22,27 @@ FAutoConsoleVariableRef CVARDebugPrintPlayerMovementComponentRotation(
 	TEXT("Print Player Movement Rotation Log"),
 	ECVF_Cheat);
 
+static int32 PrintPlayerMovementComponentClientInterpolation = 1;
+FAutoConsoleVariableRef CVARDebugPrintPlayerMovementComponentClientInterpolation(
+	TEXT("B.PrintPlayerMovementComponentClientInterpolation"),
+	PrintPlayerMovementComponentClientInterpolation,
+	TEXT("Print Player Movement Client Interpolation Log"),
+	ECVF_Cheat);
+
+
+
+static int32 PrintPlayerMovementComponentReplication = 1;
+FAutoConsoleVariableRef CVARDebugPrintPlayerMovementComponentReplication(
+	TEXT("B.PrintPlayerMovementComponentReplication"),
+	PrintPlayerMovementComponentReplication,
+	TEXT("Print Player Movement Replication Log"),
+	ECVF_Cheat);
+
 
 UBPlayerMovementComponent::UBPlayerMovementComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
+	SetIsReplicated(true);
 
 	DefaultMass = 100;					// 100kg
 	MaxVelocityScalar = 1000;			// 1000 cm/s = 10 m/s
@@ -43,6 +60,11 @@ UBPlayerMovementComponent::UBPlayerMovementComponent()
 
 	// dry roads : 0.7 , wet roads : 0.4
 	FrictionCoefficient = 0.7;
+
+	InterpolationCompletionTime = 0.0f;
+	CurrentInterpolationTime = 0.0f;
+
+	//InterpolationRatio = 1.0f;
 }
 
 void UBPlayerMovementComponent::BeginPlay()
@@ -102,9 +124,9 @@ void UBPlayerMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 		LastMovementObject.Set(SharedWorldTime
 						, DeltaTime
 						, ForwardMovementFactor
-						, RightMovementFactor);
+						, RightMovementFactor
+						, OwnerPlayer->GetControlRotation());
 		
-
 
 		/**
 		 * 클라이언트에서 컨트롤되고 있는 경우, 현재 입력을 클라이언트에서 시뮬레이션하고, 입력을 서버로 보내주고 입력 리스트를 관리한다.
@@ -114,15 +136,15 @@ void UBPlayerMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 		 * (앞에서 현재 시스템에서 컨트롤된다는 것을 체크했기 때문에 Role만 ROLE_Authority임을 확인하면 서버에서 컨트롤되고 있는 폰임을 알 수 있다.)
 		*/
 
+		// 서버든 클라이언트든 일단 로컬에서 시뮬레이션한다.
+		SimulateMovementObject(LastMovementObject);
+
 		switch (CurrentActorRole)
 		{
 		case ROLE_AutonomousProxy:
 		{
 			PendingMovementObjects.Add(LastMovementObject);
 			ServerMove(LastMovementObject);
-
-			// 클라이언트는 클라이언트대로 시뮬레이션 해야한다.
-			SimulateMovementObject(LastMovementObject);
 		}
 		break;
 		case ROLE_Authority:
@@ -131,6 +153,7 @@ void UBPlayerMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 		}
 		break;
 		}
+
 	}
 	else if(CurrentActorRole == ROLE_SimulatedProxy) // 시뮬레이션 중인 폰이라면 서버에서 받은 MovementState를 참고하여 보간을 진행한다.
 	{
@@ -195,15 +218,21 @@ bool UBPlayerMovementComponent::GetSharedWorldTime(float& SharedWorldTime) const
 	return true;
 }
 
-void UBPlayerMovementComponent::ServerMove_Implementation(const FPlayerMovementObject& MovementObject)
+void UBPlayerMovementComponent::ServerMove_Implementation(FPlayerMovementObject MovementObject)
 {
+	if (PrintPlayerMovementComponentClientInterpolation)
+	{
+		//B_LOG_DEV("ServerMove_Implementation=============================================================");
+		//MovementObject.Print();
+	}
+
 	ClientSimulatedTimeInServer += MovementObject.DeltaTime;
 
 	SimulateMovementObject(MovementObject);
 	UpdateMovementState(MovementObject);
 }
 
-bool UBPlayerMovementComponent::ServerMove_Validate(const FPlayerMovementObject& MovementObject)
+bool UBPlayerMovementComponent::ServerMove_Validate(FPlayerMovementObject MovementObject)
 {
 	if (false == MovementObject.IsValid())
 	{
@@ -230,6 +259,15 @@ bool UBPlayerMovementComponent::ServerMove_Validate(const FPlayerMovementObject&
 
 void UBPlayerMovementComponent::UpdateMovementState(const FPlayerMovementObject& MovementObject)
 {
+	if (PrintPlayerMovementComponentClientInterpolation)
+	{
+		//B_LOG_DEV("UpdateMovementState=============================================================");
+	}
+
+	//FPlayerMovementState Temp;
+	//MovementState = Temp;
+
+	//return;
 	MovementState.LastMovementObjectSharedWorldTime = MovementObject.SharedWorldTime;
 	MovementState.Tranform = GetOwner()->GetActorTransform();
 	MovementState.Velocity = GetVelocity();
@@ -239,6 +277,11 @@ void UBPlayerMovementComponent::UpdateMovementState(const FPlayerMovementObject&
 
 void UBPlayerMovementComponent::OnRep_MovementState()
 {
+	if (PrintPlayerMovementComponentClientInterpolation)
+	{
+		B_LOG_DEV("OnRep_MovementState=============================================================");
+	}
+
 	/**
 	 * TODO : 서버와 클라이언트의 동기화된 시간 변수가 서버에서 얼마나 자주 클라이언트로 리플리케이션 되는 지 확인해야 한다.
 	 * 동기화가 잘 되지 않는다면 RTT / 2 를 계산할 때, 다른 방법을 사용해야한다.
@@ -273,7 +316,10 @@ void UBPlayerMovementComponent::OnRep_MovementState()
 
 void UBPlayerMovementComponent::UpdateSimulatedProxyFromMovementState(float FromServerToClientTime /* RTT / 2 */)
 {
-
+	if (PrintPlayerMovementComponentClientInterpolation)
+	{
+		B_LOG_DEV("UpdateSimulatedProxyFromMovementState=============================================================");
+	}
 	/*
 	 * SimulatedProxy 의 경우 서버에서 받은 MovementState가 유지될 것이라는 가정하에 시뮬레이션을 진행한다.
 	 * 먼저 RTT / 2 만큼 차이나기 때문에 MovementState를 기반으로 RTT / 2 만큼 시뮬레이션해준다.
@@ -282,51 +328,99 @@ void UBPlayerMovementComponent::UpdateSimulatedProxyFromMovementState(float From
 	 * 나머지 경우에는 삼차 스플라인 곡선(삼차 에르미트 스플라인)을 만들어서 다음 상태를 받는 시점에 클라이언트가 예측한 상태로 보간한다.
 	 */
 
+	AActor* Owner = GetOwner();
 
-	TargetVelocity = MovementState.Velocity;
-	TargetLocation = MovementState.Tranform.GetLocation();
+	StartRotation = Owner->GetActorQuat();
 	TargetRotation = MovementState.Tranform.GetRotation();
+	FVector TargetVelocity = MovementState.Velocity;
+	FVector TargetLocation = MovementState.Tranform.GetLocation();
+
+	// 조금 더 생각할 필요가 있다.
+	const float ExpectedNextUpdateInterval = FromServerToClientTime;
 
 	// 클라이언트로 내려오는 동안 RTT / 2 만큼 지났고, 다음 상태는 RTT / 2 후에 갱신된다고 가정한다.
-	CalculateMovementByDeadReckoning(FromServerToClientTime + FromServerToClientTime);
+	CalculateMovementByDeadReckoning(FromServerToClientTime + ExpectedNextUpdateInterval,
+		TargetLocation, TargetVelocity);
 
-	/*
-	Spline.TargetLocation = 
-	Spline.StartLocation = ClientStartTransform.GetLocation();
-	Spline.StartDerivative = ClientStartVelocity * VelocityToDerivative();
-	Spline.TargetDerivative = ServerState.Velocity * VelocityToDerivative();
+	CubicSpline.Set(GetOwner()->GetActorLocation(), GetVelocity(),
+		TargetLocation, TargetVelocity);
 
-	// 다음 리플리케이션 시점이 RTT / 2 로 가정한다.
+	InterpolationCompletionTime = ExpectedNextUpdateInterval;
+	CurrentInterpolationTime = 0.0f;
+	//InterpolationRatio = 0.0f;
 
-
-	ClientTimeBetweenLastUpdates = ClientTimeSinceUpdate;
-	ClientTimeSinceUpdate = 0;
-
-	if (MeshOffsetRoot != nullptr)
+	if (PrintPlayerMovementComponentClientInterpolation)
 	{
-		ClientStartTransform.SetLocation(MeshOffsetRoot->GetComponentLocation());
-		ClientStartTransform.SetRotation(MeshOffsetRoot->GetComponentQuat());
-	}
-	ClientStartVelocity = MovementComponent->GetVelocity();
+		B_LOG_DEV("InterpolationCompletionTime : %.1f", InterpolationCompletionTime);
+		B_LOG_DEV("StartLocation : %.1f, %.1f, %.1f", CubicSpline.StartLocation.X, CubicSpline.StartLocation.Y, CubicSpline.StartLocation.Z);
+		B_LOG_DEV("TargetLocation : %.1f, %.1f, %.1f", CubicSpline.TargetLocation.X, CubicSpline.TargetLocation.Y, CubicSpline.TargetLocation.Z);
 
-	GetOwner()->SetActorTransform(ServerState.Tranform);
-	*/
+		B_LOG_DEV("StartVelocity : %.1f, %.1f, %.1f", CubicSpline.StartVelocity.X, CubicSpline.StartVelocity.Y, CubicSpline.StartVelocity.Z);
+		B_LOG_DEV("TargetVelocity : %.1f, %.1f, %.1f", CubicSpline.TargetVelocity.X, CubicSpline.TargetVelocity.Y, CubicSpline.TargetVelocity.Z);
+	}
 }
 
-void UBPlayerMovementComponent::CalculateMovementByDeadReckoning(float DeltaTime)
+void UBPlayerMovementComponent::CalculateMovementByDeadReckoning(float ElapsedTime,
+	FVector& CurrentLocation, FVector& CurrentVelocity) const
 {
-	TargetLocation += TargetVelocity * DeltaTime;
+	CurrentLocation += CurrentVelocity * ElapsedTime;
+
+	// 더 계산해야하면 추가
 }
 
 void UBPlayerMovementComponent::InterpolateFromClient(float DeltaTime)
 {
-	/** Location 보간 */
+	//B_LOG_DEV("InterpolateFromClient => DeltaTime : %.1f", DeltaTime);
+	AActor* OwnerActor = GetOwner();
+	if (0.0f < InterpolationCompletionTime) // 보간중인 상태
+	{
+		CurrentInterpolationTime += DeltaTime;
 
-	/** Velocity 보간 */
+		const float InterpolationRatio = FMath::Clamp(CurrentInterpolationTime / InterpolationCompletionTime, 0.0f, 1.0f);
+		if (1.0f == InterpolationRatio)
+		{
+			InterpolationCompletionTime = 0.0f;
+			CurrentInterpolationTime = 0.0f;
+		}
+
+		// 위치, 속도 스플라인 보간
+		OwnerActor->SetActorLocation(CubicSpline.InterpolateLocation(InterpolationRatio));
+		SetVelocity(CubicSpline.InterpolateVelocity(InterpolationRatio));
+
+		// 회전 구면 보간
+		const FQuat NewRotation = FQuat::Slerp(StartRotation, TargetRotation, InterpolationRatio);
+		OwnerActor->SetActorRotation(NewRotation);
+
+		if (PrintPlayerMovementComponentClientInterpolation)
+		{
+			B_LOG_DEV("Interpolating=========================================================================================");
+			B_LOG_DEV("InterpolationRatio : %.1f", InterpolationRatio);
+		}
+	}
+	else // 보간완료 상태이기 때문에 현재 속도 기반으로 시뮬레이션한다.
+	{
+		FVector CurrentActorLocation = OwnerActor->GetActorLocation();
+		FVector CurrentVelocity = GetVelocity();
+
+		CalculateMovementByDeadReckoning(DeltaTime, CurrentActorLocation, CurrentVelocity);
+
+		OwnerActor->SetActorLocation(CurrentActorLocation);
+		SetVelocity(CurrentVelocity);
+
+		if (PrintPlayerMovementComponentClientInterpolation)
+		{
+			B_LOG_DEV("Simulating By DeadReckoning=========================================================================================");
+		}
+	}
 }
 
 void UBPlayerMovementComponent::UpdateAutonomousProxyFromMovementState(float FromServerToClientTime /* RTT / 2 */)
 {
+	if (PrintPlayerMovementComponentClientInterpolation)
+	{
+		B_LOG_DEV("UpdateAutonomousProxyFromMovementState=============================================================");
+	}
+
 	/*
 	 * AutonomousProxy 의 경우 미쳐리된 입력까지 모두 알고 있기 때문에 정확하게 시뮬레이션 할 수 있다.
 	 * RTT / 2 만큼 차이나는 시뮬레이션을 처리하기 위해 보간 방법이 아닌, 다른 작업을 해주지 않아도 될것 같다.
@@ -376,13 +470,10 @@ void UBPlayerMovementComponent::RemoveProcessedMovementObjects(float LastMovemen
 
 	PendingMovementObjects = NewPendingMovementObjects;
 }
-
-
-
 // End : Replication 관련 코드 =============================================================================================
 
-// Begin : Transform, Physics 관련 코드 ======================================================================================
 
+// Begin : Transform, Physics 관련 코드 ======================================================================================
 void UBPlayerMovementComponent::RefreshMovementVariable()
 {
 	CurrentMaxVelocityScalar = MaxVelocityScalar * CurrentMaxVelocityFactor;
@@ -392,7 +483,7 @@ void UBPlayerMovementComponent::RefreshMovementVariable()
 	AccelerationScalar = MovementForceScalar / DefaultMass;
 }
 
-float UBPlayerMovementComponent::GetDeltaTranslationScalar(const FVector& CurrentVelocity, float DeltaTime) const
+float UBPlayerMovementComponent::GetDeltaTranslationScalar(float DeltaTime, const FVector& CurrentVelocity) const
 {
 	return CurrentVelocity.Size() * DeltaTime;
 }
@@ -434,8 +525,8 @@ void UBPlayerMovementComponent::SimulateMovementObject(const FPlayerMovementObje
 		B_LOG_DEV("%.1f, %.1f", ForwardMovementFactor, RightMovementFactor);
 	}
 
-	UpdateVelocity(ForwardMovementFactor, RightMovementFactor, DeltaTime);
-	UpdateTransform(ForwardMovementFactor, RightMovementFactor, DeltaTime);
+	UpdateVelocity(DeltaTime, ForwardMovementFactor, RightMovementFactor);
+	UpdateTransform(DeltaTime, ForwardMovementFactor, RightMovementFactor, MovementObject.ControlRotation);
 }
 
 void UBPlayerMovementComponent::SetVelocity(const FVector& NewVelocity)
@@ -444,9 +535,9 @@ void UBPlayerMovementComponent::SetVelocity(const FVector& NewVelocity)
 	Velocity = NewVelocity;
 }
 
-void UBPlayerMovementComponent::UpdateVelocity(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime)
+void UBPlayerMovementComponent::UpdateVelocity(float DeltaTime, float ForwardMovementFactor, float RightMovementFactor)
 {
-	ApplyInputToVelocity(ForwardMovementFactor, RightMovementFactor, DeltaTime);
+	ApplyInputToVelocity(DeltaTime, ForwardMovementFactor, RightMovementFactor);
 	ApplyResistanceToVelocity(DeltaTime);
 }
 
@@ -489,7 +580,7 @@ void UBPlayerMovementComponent::ApplyResistanceToVelocity(float DeltaTime)
 	}
 }
 
-void UBPlayerMovementComponent::ApplyInputToVelocity(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime)
+void UBPlayerMovementComponent::ApplyInputToVelocity(float DeltaTime, float ForwardMovementFactor, float RightMovementFactor)
 {
 	/** 입력 계산 */
 	if (!ForwardMovementFactor && !RightMovementFactor)
@@ -524,16 +615,16 @@ void UBPlayerMovementComponent::ApplyInputToVelocity(float ForwardMovementFactor
 	}
 }
 
-float UBPlayerMovementComponent::ConvertToControlRotationRange(float angle) const
+float UBPlayerMovementComponent::ConvertToControlRotationRange(float TargetAngle) const
 {
 	// 정밀도를 소수점 2자리까지 보장한다.
 	static const int AngleFactor = 100;
 	static const int MaxAngle = 360 * AngleFactor;
 
-	int IntAngle = angle * AngleFactor;
+	int IntAngle = TargetAngle * AngleFactor;
 	IntAngle %= MaxAngle;
 
-	if (0.0f > angle)
+	if (0.0f > TargetAngle)
 	{
 		IntAngle += MaxAngle;
 	}
@@ -541,15 +632,17 @@ float UBPlayerMovementComponent::ConvertToControlRotationRange(float angle) cons
 	return ((float)IntAngle / AngleFactor);
 }
 
-void UBPlayerMovementComponent::UpdateTransform(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime)
+void UBPlayerMovementComponent::UpdateTransform(float DeltaTime, 
+	float ForwardMovementFactor, float RightMovementFactor, const FRotator& ControlRotation)
 {
-	const float DeltaTranslationScalar = GetDeltaTranslationScalar(Velocity, DeltaTime);
-	UpdateRotation(DeltaTranslationScalar);
+	const float DeltaTranslationScalar = GetDeltaTranslationScalar(DeltaTime, Velocity);
+	UpdateRotation(DeltaTranslationScalar, ControlRotation);
 	UpdateLocation(DeltaTranslationScalar);
 }
 
-void UBPlayerMovementComponent::UpdateRotation(float DeltaTranslationScalar)
+void UBPlayerMovementComponent::UpdateRotation(float DeltaTranslationScalar, const FRotator& ControlRotation)
 {
+	Cast<APawn>(GetOwner())->GetControlRotation();
 	/**
 	 * ActorRotation은 Quaternion으로 되어있고, Rotator로 변환할 때, Yaw는 Atan2함수를 사용하여 변환한다.
 	 * 따라서 ActionRotation은 [-180, 180]까지의 범위를 가진다.
@@ -563,8 +656,8 @@ void UBPlayerMovementComponent::UpdateRotation(float DeltaTranslationScalar)
 
 	//const float CurrentYaw = ActorRot.Yaw;
 
-	const FRotator ControlRot = OwnerPlayer->GetControlRotation();
-	float TargetYaw = ControlRot.Yaw;
+	//const FRotator ControlRot = OwnerPlayer->GetControlRotation();
+	float TargetYaw = ControlRotation.Yaw;
 
 	float RemainingYaw = TargetYaw - CurrentYaw;
 	float YawFactor = (RemainingYaw < 0) ? -1 : 1;
@@ -634,5 +727,4 @@ void UBPlayerMovementComponent::UpdateLocation(float DeltaTranslationScalar)
 	FinalDirection.Normalize();
 	*/
 }
-
 // End : Transform, Physics 관련 코드 ======================================================================================

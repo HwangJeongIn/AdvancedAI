@@ -23,12 +23,17 @@ struct FPlayerMovementObject
 	UPROPERTY()
 	float RightMovementFactor;
 
-	void Set(float InputSharedWorldTime, float InputDeltaTime, float InputForwardMovementFactor, float InputRightMovementFactor)
+	UPROPERTY()
+	FRotator ControlRotation;
+
+	void Set(float InputSharedWorldTime, float InputDeltaTime, 
+		float InputForwardMovementFactor, float InputRightMovementFactor, const FRotator& InputControlRotation)
 	{
 		SharedWorldTime = InputSharedWorldTime;
 		DeltaTime = InputDeltaTime;
 		ForwardMovementFactor = InputForwardMovementFactor;
 		RightMovementFactor = InputRightMovementFactor;
+		ControlRotation = InputControlRotation;
 	}
 
 	/** 입력 값 검증을 통한 치트 방지 */
@@ -36,6 +41,15 @@ struct FPlayerMovementObject
 	{
 		return (1 >= FMath::Abs(ForwardMovementFactor)) 
 			&& (1 >= FMath::Abs(RightMovementFactor));
+	}
+
+	void Print() const
+	{
+		B_LOG_DEV("SharedWorldTime : %.1f", SharedWorldTime);
+		B_LOG_DEV("DeltaTime : %.1f", DeltaTime);
+		B_LOG_DEV("ForwardMovementFactor : %.1f", ForwardMovementFactor);
+		B_LOG_DEV("RightMovementFactor : %.1f", RightMovementFactor);
+		B_LOG_DEV("ControlRotation : %.1f, %.1f, %.1f", ControlRotation.Pitch, ControlRotation.Yaw, ControlRotation.Roll);
 	}
 };
 
@@ -62,20 +76,31 @@ struct FPlayerMovementState
 
 struct FHermiteCubicSpline
 {
-	FVector StartLocation, StartDerivative, TargetLocation, TargetDerivative;
+	FVector StartLocation, StartVelocity;
+	FVector TargetLocation, TargetVelocity;
 
-	FVector InterpolateLocation(float LerpRatio) const
+	void Set(const FVector& InputStartLocation, const FVector& InputStartVelocity,
+		const FVector& InputTargetLocation, const FVector& InputTargetVelocity)
 	{
-		return FMath::CubicInterp(StartLocation, StartDerivative, TargetLocation, TargetDerivative, LerpRatio);
+		StartLocation = InputStartLocation;
+		StartVelocity = InputStartVelocity;
+		TargetLocation = InputTargetLocation;
+		TargetVelocity = InputTargetVelocity;
 	}
-	FVector InterpolateDerivative(float LerpRatio) const
+
+	FVector InterpolateLocation(float InterpolationRatio) const
 	{
-		return FMath::CubicInterpDerivative(StartLocation, StartDerivative, TargetLocation, TargetDerivative, LerpRatio);
+		return FMath::CubicInterp(StartLocation, StartVelocity, TargetLocation, TargetVelocity, InterpolationRatio);
+	}
+
+	FVector InterpolateVelocity(float InterpolationRatio) const
+	{
+		return FMath::CubicInterpDerivative(StartLocation, StartVelocity, TargetLocation, TargetVelocity, InterpolationRatio);
 	}
 };
 
 
-UCLASS(/*ClassGroup = (Custom), meta = (BlueprintSpawnableComponent)*/)
+UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class ADVANCEDAI_API UBPlayerMovementComponent : public UActorComponent
 {
 	GENERATED_BODY()
@@ -105,19 +130,23 @@ private:
 
 	bool GetSharedWorldTime(float& SharedWorldTime) const;
 
+	/**
+	 * 클라이언트에서 서버로 입력을 전송하는 함수
+	 * 처음에는 const FPlayerMovementObject& 형식으로 넘겨줬는데, 
+	 * FPlayerMovementObject가 지역변수라서 서버에는 이상한 값이 전달됐다. 그냥 복사해서 넘기는 것으로 변경하였다. */
 	UFUNCTION(Server, Reliable, WithValidation)
-	void ServerMove(const FPlayerMovementObject& MovementObject);
+	void ServerMove(FPlayerMovementObject MovementObject);
 
 	// bool CreateMovementObject(float DeltaTime, FPlayerMovementObject& NewMovementObject) const;
 
 	void UpdateMovementState(const FPlayerMovementObject& MovementObject);
 
-	UFUNCTION()
-	void OnRep_MovementState();
-
 	/** 서버에서 리플리케이션되는 이동 정보 */
 	UPROPERTY(ReplicatedUsing = OnRep_MovementState)
 	FPlayerMovementState MovementState;
+
+	UFUNCTION()
+	void OnRep_MovementState();
 
 	/** DeltaTime을 사용한 치트 방지 */
 	float ClientSimulatedTimeInServer;
@@ -131,7 +160,8 @@ private:
 	/** 
 	 * 클라이언트에서 SimulatedProxy 을 시뮬레이션할 때, 현재 움직임을 기반으로 미래의 움직임을 예측하는 함수
 	 * 간단히 해당 움직임을 유지할 것이라고 예측한다. */
-	void CalculateMovementByDeadReckoning(float DeltaTime);
+	void CalculateMovementByDeadReckoning(float ElapsedTime,
+		FVector& CurrentLocation, FVector& CurrentVelocity) const;
 
 	/** 클라이언트에서 Role이 ROLE_SimulatedProxy 일 때, 매 프레임 보간하는 함수 */
 	void InterpolateFromClient(float DeltaTime);
@@ -142,9 +172,14 @@ private:
 	 
 	 */
 
-	FVector TargetVelocity;
-	FVector TargetLocation;
+	FHermiteCubicSpline CubicSpline;
+
+	FQuat StartRotation;
 	FQuat TargetRotation;
+
+	float InterpolationCompletionTime;
+	float CurrentInterpolationTime;
+	//float InterpolationRatio;
 
 
 	/// AutonomousProxy 보간 관련
@@ -170,7 +205,7 @@ private:
 
 	void RefreshMovementVariable();
 
-	float GetDeltaTranslationScalar(const FVector& CurrentVelocity, float DeltaTime) const;
+	float GetDeltaTranslationScalar(float DeltaTime, const FVector& CurrentVelocity) const;
 
 	float GetResistanceScalar(const float VelocityScalar /* Speed */) const;
 	float GetAirResistanceScalar(const float VelocityScalar /* Speed */) const;
@@ -178,13 +213,15 @@ private:
 
 	void SimulateMovementObject(const FPlayerMovementObject& MovementObject);
 	void SetVelocity(const FVector& NewVelocity);
-	void UpdateVelocity(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime);
+	void UpdateVelocity(float DeltaTime, float ForwardMovementFactor, float RightMovementFactor);
 	void ApplyResistanceToVelocity(float DeltaTime);
-	void ApplyInputToVelocity(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime);
+	void ApplyInputToVelocity(float DeltaTime, float ForwardMovementFactor, float RightMovementFactor);
 
-	float ConvertToControlRotationRange(float angle) const;
-	void UpdateTransform(float ForwardMovementFactor, float RightMovementFactor, float DeltaTime);
-	void UpdateRotation(float DeltaTranslationScalar);
+	float ConvertToControlRotationRange(float TargetAngle) const;
+	void UpdateTransform(float DeltaTime,
+		float ForwardMovementFactor, float RightMovementFactor, const FRotator& ControlRotation);
+
+	void UpdateRotation(float DeltaTranslationScalar, const FRotator& ControlRotation);
 	void UpdateLocation(float DeltaTranslationScalar);
 
 	UPROPERTY(EditDefaultsOnly)
