@@ -172,24 +172,6 @@ void UBPlayerMovementComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 	DOREPLIFETIME(UBPlayerMovementComponent, MovementState);
 }
 
-/*
-bool UBPlayerMovementComponent::CreateMovementObject(float DeltaTime, FPlayerMovementObject& NewMovementObject) const
-{
-	const AGameStateBase* CurrentGameState = nullptr != GetWorld() ? GetWorld()->GetGameState() : nullptr;
-	if (nullptr == CurrentGameState)
-	{
-		return false;
-	}
-
-	NewMovementObject.DeltaTime = DeltaTime;
-	NewMovementObject.SharedTime = CurrentGameState->GetServerWorldTimeSeconds();
-
-	NewMovementObject.SteeringThrow = SteeringThrow;
-	NewMovementObject.Throttle = Throttle;
-	return true;
-}
-*/
-
 void UBPlayerMovementComponent::SetMaxVelocityFactor(const float NewMaxVelocityFactor)
 {
 	CurrentMaxVelocityFactor = NewMaxVelocityFactor;
@@ -268,10 +250,6 @@ void UBPlayerMovementComponent::UpdateMovementState(const FPlayerMovementObject&
 		//B_LOG_DEV("UpdateMovementState=============================================================");
 	}
 
-	//FPlayerMovementState Temp;
-	//MovementState = Temp;
-
-	//return;
 	MovementState.LastMovementObjectSharedWorldTime = MovementObject.SharedWorldTime;
 	MovementState.Tranform = GetOwner()->GetActorTransform();
 	MovementState.Velocity = GetVelocity();
@@ -413,7 +391,6 @@ void UBPlayerMovementComponent::InterpolateFromClient(float DeltaTime)
 		if (1.0f == InterpolationRatio)
 		{
 			InterpolationCompletionTime = 0.0f;
-			CurrentInterpolationTime = 0.0f;
 		}
 
 		// 위치, 속도 스플라인 보간
@@ -626,7 +603,6 @@ void UBPlayerMovementComponent::ApplyInputToVelocity(float DeltaTime, float Forw
 
 	//const FQuat InputRelativeDirectionRotation = InputRelativeDirection.ToOrientationQuat();
 	//const FQuat VelocityRotation = Velocity.ToOrientationQuat();
-
 	const FQuat ActorRotation = GetOwner()->GetActorQuat();
 	const FVector InputWorldDirection = ActorRotation.RotateVector(InputRelativeDirection);
 
@@ -634,10 +610,6 @@ void UBPlayerMovementComponent::ApplyInputToVelocity(float DeltaTime, float Forw
 	const FVector InputDeltaVelocity = InputWorldDirection * AccelerationScalar * DeltaTime;
 	Velocity = Velocity + InputDeltaVelocity;
 
-	/*
-	const FQuat InputWorldDirectionRotation = InputRelativeDirectionRotation * (-VelocityRotation);
-	// AccelerationScalar = MovementForceScalar / DefaultMass
-	*/
 	if (PrintPlayerMovementComponentVelocity)
 	{
 		B_LOG_DEV("ApplyInputToVelocity=========================================================================================");
@@ -685,10 +657,7 @@ void UBPlayerMovementComponent::UpdateRotation(float DeltaTranslationScalar, con
 
 	ABPlayer* OwnerPlayer = Cast<ABPlayer>(GetOwner());
 
-	//FRotator ActorRot = OwnerPlayer->GetActorRotation();
-
-	//const float CurrentYaw = ActorRot.Yaw;
-
+	/** 입력 데이터에서 사용 */
 	//const FRotator ControlRot = OwnerPlayer->GetControlRotation();
 	float TargetYaw = ControlRotation.Yaw;
 
@@ -747,17 +716,6 @@ void UBPlayerMovementComponent::UpdateLocation(float DeltaTranslationScalar)
 	{
 		Velocity = FVector::ZeroVector;
 	}
-	*/
-
-	// 입력을 바로 반영할 때 사용
-	/*
-	const FRotator ActorRot = OwnerPlayer->GetActorRotation();
-
-	FVector ForwardVector = ActorRot.Vector();
-	FVector RightVector = FRotationMatrix(ActorRot).GetScaledAxis(EAxis::Y);
-
-	FVector FinalDirection = ForwardVector * ForwardMovementFactor + RightVector * RightMovementFactor;
-	FinalDirection.Normalize();
 	*/
 }
 // End : Transform, Physics 관련 코드 ======================================================================================
