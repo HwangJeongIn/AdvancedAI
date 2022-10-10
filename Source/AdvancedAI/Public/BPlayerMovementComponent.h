@@ -124,6 +124,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	float GetCurrentYaw() const;
 
+	UFUNCTION(BlueprintCallable)
+	float GetMaxSpeed() const;
+
 
 	// Begin : Replication 관련 코드 =============================================================================================
 private:

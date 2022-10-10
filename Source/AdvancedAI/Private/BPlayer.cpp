@@ -8,6 +8,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "BPlayerMovementComponent.h"
+#include "BPlayerAnimInstance.h"
 
 
 ABPlayer::ABPlayer()
@@ -76,19 +77,18 @@ ABPlayer::ABPlayer()
 	RightMovementFactor = 0.0f;
 }
 
-// Called when the game starts or when spawned
 void ABPlayer::BeginPlay()
 {
 	Super::BeginPlay();
 
-}
-/*
-void ABPlayer::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
+	PlayerAnimInstance = Cast<UBPlayerAnimInstance>(MeshComp->GetAnimInstance());
 
+	B_ASSERT_DEV(PlayerAnimInstance, " 확인해주세요. ")
+	if (PlayerAnimInstance)
+	{
+		PlayerAnimInstance->OnMontageEnded.AddDynamic(this, &ABPlayer::OnPrimaryAttackMontageEnded);
+	}
 }
-*/
 
 void ABPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -99,6 +99,17 @@ void ABPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
+
+
+	PlayerInputComponent->BindAction("PrimaryAttack", IE_Pressed, this, &ABPlayer::PrimaryAttackStart);
+	PlayerInputComponent->BindAction("PrimaryAttack", IE_Released, this, &ABPlayer::PrimaryAttackStop);
+	// Used generic name 'SecondaryAttack' for binding
+	PlayerInputComponent->BindAction("SecondaryAttack", IE_Pressed, this, &ABPlayer::SecondaryAttack);
+	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &ABPlayer::Dash);
+	PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &ABPlayer::SprintStart);
+	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &ABPlayer::SprintEnd);
+
+
 }
 
 FVector ABPlayer::GetVelocity() const
@@ -157,3 +168,45 @@ void ABPlayer::MoveRight(float Value)
 	*/
 }
 
+void ABPlayer::PrimaryAttackStart()
+{
+	B_LOG_DEV("PrimaryAttackStart")
+	if (PlayerAnimInstance)
+	{
+		B_LOG_DEV("PrimaryAttackStart1")
+		PlayerAnimInstance->PlayPrimaryAttackMontage();
+	}
+}
+
+void ABPlayer::PrimaryAttackStop()
+{
+	if (PlayerAnimInstance)
+	{
+		//PlayerAnimInstance->PlayPrimaryAttackMontage();
+	}
+}
+
+void ABPlayer::SecondaryAttack()
+{
+
+}
+
+void ABPlayer::Dash()
+{
+
+}
+
+void ABPlayer::SprintStart()
+{
+
+}
+
+void ABPlayer::SprintEnd()
+{
+
+}
+
+void ABPlayer::OnPrimaryAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+
+}

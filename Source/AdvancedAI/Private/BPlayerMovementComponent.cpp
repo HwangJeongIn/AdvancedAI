@@ -186,6 +186,22 @@ FVector UBPlayerMovementComponent::GetVelocity() const
 float UBPlayerMovementComponent::GetCurrentYaw() const
 {
 	return CurrentYaw;
+	// [-180, 180 으로 변환]
+	/*
+	if (180.0f < CurrentYaw)
+	{
+		return 360.0f - CurrentYaw;
+	}
+	else
+	{
+		return CurrentYaw;
+	}
+	*/
+}
+
+float UBPlayerMovementComponent::GetMaxSpeed() const
+{
+	return MaxVelocityScalar;
 }
 
 

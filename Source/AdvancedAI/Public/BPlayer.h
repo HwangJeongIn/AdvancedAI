@@ -12,7 +12,7 @@ class USkeletalMeshComponent;
 class UCameraComponent;
 class USpringArmComponent;
 class UBPlayerMovementComponent;
-
+class UBPlayerAnimInstance;
 
 UCLASS()
 class ADVANCEDAI_API ABPlayer : public APawn
@@ -41,7 +41,6 @@ public:
 	float GetRightMovementFactor() const;
 
 
-
 private:
 
 	void MoveForward(float Value);
@@ -64,4 +63,25 @@ private:
 
 	float ForwardMovementFactor;
 	float RightMovementFactor;
+
+
+private:
+
+	void PrimaryAttackStart();
+	void PrimaryAttackStop();
+
+	void SecondaryAttack();
+	void Dash();
+
+	void SprintStart();
+	void SprintEnd();
+
+	UFUNCTION()
+	void OnPrimaryAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+	UPROPERTY()
+	UBPlayerAnimInstance* PlayerAnimInstance;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Attack, Meta = (AllowPrivateAccess = true))
+	bool IsAttacking;
 };
