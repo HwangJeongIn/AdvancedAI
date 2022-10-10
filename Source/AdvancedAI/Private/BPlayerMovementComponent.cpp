@@ -55,7 +55,7 @@ UBPlayerMovementComponent::UBPlayerMovementComponent()
 	// MovementForceScalar = 100000;	// 100000cN (§¸ ¡¿ (cm/s^2))cN
 	// Acceleration : 1000 (cm/s^2) => 10 (m/s^2)
 
-	MinTurningRadius = 100;				// 100 cm
+	MinTurningRadius = 250;				// 250 cm
 
 	// Person(upright position) : 1.0 - 1.3rr
 	DragCoefficient = 1.3;
