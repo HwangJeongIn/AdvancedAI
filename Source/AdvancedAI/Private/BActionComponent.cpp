@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "BActionComponent.h"
@@ -71,7 +71,7 @@ void UBActionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	for (UBAction* Action : ActivatedActions)
 	{
-		B_ASSERT_DEV(Action, "¿Ö ¹ß»ıÇÏ´Â Áö È®ÀÎÇØ¾ßÇÕ´Ï´Ù.");
+		B_ASSERT_DEV(Action, "ì™œ ë°œìƒí•˜ëŠ” ì§€ í™•ì¸í•´ì•¼í•©ë‹ˆë‹¤.");
 		if (nullptr == Action || false == Action->IsRunning())
 		{
 			continue;
@@ -87,21 +87,21 @@ void UBActionComponent::AddAction(AActor* Instigator, TSubclassOf<UBAction> Acti
 {
 	if (nullptr == ActionClass)
 	{
-		B_ASSERT_DEV(false, "ºñÁ¤»óÀÔ´Ï´Ù.");
+		B_ASSERT_DEV(false, "ë¹„ì •ìƒì…ë‹ˆë‹¤.");
 		return;
 	}
 
 	AActor* OwnerActor = GetOwner();
 	if (false == OwnerActor->HasAuthority())
 	{
-		B_ASSERT_DEV(false, "Å¬¶óÀÌ¾ğÆ® ÀÔ´Ï´Ù.");
+		B_ASSERT_DEV(false, "í´ë¼ì´ì–¸íŠ¸ ì…ë‹ˆë‹¤.");
 		return;
 	}
 
 	UBAction* NewAction = NewObject<UBAction>(OwnerActor, ActionClass);
 	if (nullptr == NewAction)
 	{
-		B_ASSERT_DEV(false, "ºñÁ¤»óÀÔ´Ï´Ù.");
+		B_ASSERT_DEV(false, "ë¹„ì •ìƒì…ë‹ˆë‹¤.");
 		return;
 	}
 
@@ -123,7 +123,7 @@ UBAction* UBActionComponent::GetAction(TSubclassOf<UBAction> ActionClass) const
 {
 	for (UBAction* Action : ActivatedActions)
 	{
-		B_ASSERT_DEV(Action, "¿Ö ¹ß»ıÇÏ´Â Áö È®ÀÎÇØ¾ßÇÕ´Ï´Ù.");
+		B_ASSERT_DEV(Action, "ì™œ ë°œìƒí•˜ëŠ” ì§€ í™•ì¸í•´ì•¼í•©ë‹ˆë‹¤.");
 		if (nullptr == Action || false == Action->IsA(ActionClass))
 		{
 			continue;
@@ -139,7 +139,7 @@ UBAction* UBActionComponent::GetActionByName(const FName& ActionName) const
 {
 	for (UBAction* Action : ActivatedActions)
 	{
-		B_ASSERT_DEV(Action, "¿Ö ¹ß»ıÇÏ´Â Áö È®ÀÎÇØ¾ßÇÕ´Ï´Ù.");
+		B_ASSERT_DEV(Action, "ì™œ ë°œìƒí•˜ëŠ” ì§€ í™•ì¸í•´ì•¼í•©ë‹ˆë‹¤.");
 		if (nullptr == Action || false == Action->Compare(ActionName))
 		{
 			continue;
@@ -156,13 +156,13 @@ bool UBActionComponent::StartActionByName(AActor* Instigator, const FName& Actio
 	UBAction* TargetAction = GetActionByName(ActionName);
 	if (nullptr == TargetAction)
 	{
-		B_ASSERT_DEV(false, "ºñÁ¤»óÀÔ´Ï´Ù.");
+		B_ASSERT_DEV(false, "ë¹„ì •ìƒì…ë‹ˆë‹¤.");
 		return false;
 	}
 
 	if (false == TargetAction->CanStart(Instigator))
 	{
-		B_ASSERT_DEV(false, "ºñÁ¤»óÀÔ´Ï´Ù.");
+		B_ASSERT_DEV(false, "ë¹„ì •ìƒì…ë‹ˆë‹¤.");
 		return false;
 	}
 
@@ -181,13 +181,13 @@ bool UBActionComponent::StopActionByName(AActor* Instigator, const FName& Action
 	UBAction* TargetAction = GetActionByName(ActionName);
 	if (nullptr == TargetAction)
 	{
-		B_ASSERT_DEV(false, "ºñÁ¤»óÀÔ´Ï´Ù.");
+		B_ASSERT_DEV(false, "ë¹„ì •ìƒì…ë‹ˆë‹¤.");
 		return false;
 	}
 
 	if (false == TargetAction->CanStop(Instigator))
 	{
-		B_ASSERT_DEV(false, "ºñÁ¤»óÀÔ´Ï´Ù.");
+		B_ASSERT_DEV(false, "ë¹„ì •ìƒì…ë‹ˆë‹¤.");
 		return false;
 	}
 

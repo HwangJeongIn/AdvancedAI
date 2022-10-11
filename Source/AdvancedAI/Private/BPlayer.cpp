@@ -220,12 +220,12 @@ void ABPlayer::Dash()
 
 void ABPlayer::SprintStart()
 {
-
+	ActionComp->StartActionByName(this, "Sprint");
 }
 
 void ABPlayer::SprintEnd()
 {
-
+	ActionComp->StopActionByName(this, "Sprint");
 }
 
 void ABPlayer::OnPrimaryAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
