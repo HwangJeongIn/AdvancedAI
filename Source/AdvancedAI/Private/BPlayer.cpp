@@ -8,7 +8,10 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "BPlayerMovementComponent.h"
+#include "BStatusComponent.h"
+#include "BActionComponent.h"
 #include "BPlayerAnimInstance.h"
+#include "BPlayerController.h"
 
 
 ABPlayer::ABPlayer()
@@ -24,8 +27,7 @@ ABPlayer::ABPlayer()
 	bUseControllerRotationRoll = false;
 	bUseControllerRotationYaw = false;
 
-	PlayerMovementComp = CreateDefaultSubobject<UBPlayerMovementComponent>("PlayerMovementComp");
-
+	/** Scene */
 	CapsuleComp = CreateDefaultSubobject<UCapsuleComponent>("CapsuleComp");
 	CapsuleComp->InitCapsuleSize(34.0f, 88.0f);
 	CapsuleComp->SetCollisionProfileName(UCollisionProfile::Pawn_ProfileName);
@@ -57,6 +59,7 @@ ABPlayer::ABPlayer()
 		MeshComp->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
 	}
 
+	/** Camera, SpringArm */
 	SpringArmComp = CreateDefaultSubobject<USpringArmComponent>("SpringArmComp");
 	SpringArmComp->bUsePawnControlRotation = true;
 	SpringArmComp->SetRelativeLocation(FVector(0.0f, 0.0f, 80.0f));
@@ -71,10 +74,17 @@ ABPlayer::ABPlayer()
 	CameraComp = CreateDefaultSubobject<UCameraComponent>("CameraComp");
 	CameraComp->SetupAttachment(SpringArmComp);
 
-
-	// 시뮬레이션 테스트
+	/** Movement */
+	PlayerMovementComp = CreateDefaultSubobject<UBPlayerMovementComponent>("PlayerMovementComp");
 	ForwardMovementFactor = 0.0f;
 	RightMovementFactor = 0.0f;
+
+	/** Status */
+	StatusComp = CreateDefaultSubobject<UBStatusComponent>("StatusComp");
+
+	/** Action */
+	ActionComp = CreateDefaultSubobject<UBActionComponent>("ActionComp");
+
 }
 
 void ABPlayer::BeginPlay()
@@ -88,6 +98,8 @@ void ABPlayer::BeginPlay()
 	{
 		PlayerAnimInstance->OnMontageEnded.AddDynamic(this, &ABPlayer::OnPrimaryAttackMontageEnded);
 	}
+
+	StatusComp->OnHealthChanged.AddDynamic(this, &ABPlayer::OnHealthChanged);
 }
 
 void ABPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -166,6 +178,16 @@ void ABPlayer::MoveRight(float Value)
 
 	FVector RightVector = FRotationMatrix(ControlRot).GetScaledAxis(EAxis::Y);
 	*/
+}
+
+void ABPlayer::OnHealthChanged(AActor* InstigatorActor, UBStatusComponent* OwningStatusComp, float NewHealth, float DeltaHealth)
+{
+	if (0.0f >= NewHealth)
+	{
+		APlayerController* PC = Cast<APlayerController>(GetController());
+		DisableInput(PC);
+		SetLifeSpan(5.0f);
+	}
 }
 
 void ABPlayer::PrimaryAttackStart()

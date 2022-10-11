@@ -12,7 +12,10 @@ class USkeletalMeshComponent;
 class UCameraComponent;
 class USpringArmComponent;
 class UBPlayerMovementComponent;
+class UBStatusComponent;
+class UBActionComponent;
 class UBPlayerAnimInstance;
+
 
 UCLASS()
 class ADVANCEDAI_API ABPlayer : public APawn
@@ -32,19 +35,10 @@ public:
 	//virtual void Tick(float DeltaTime) override;
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	virtual FVector GetVelocity() const override;
 
-	UFUNCTION(BlueprintCallable)
-	float GetCurrentYaw() const;
-
-	float GetForwardMovementFactor() const;
-	float GetRightMovementFactor() const;
 
 
 private:
-
-	void MoveForward(float Value);
-	void MoveRight(float Value);
 
 	UPROPERTY(Category = "Components", VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	UCapsuleComponent* CapsuleComp;
@@ -58,6 +52,20 @@ private:
 	UPROPERTY(Category = "Components", VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* CameraComp;
 
+
+	/** Movement */
+public:
+	virtual FVector GetVelocity() const override;
+
+	UFUNCTION(BlueprintCallable)
+	float GetCurrentYaw() const;
+	float GetForwardMovementFactor() const;
+	float GetRightMovementFactor() const;
+
+private:
+	void MoveForward(float Value);
+	void MoveRight(float Value);
+
 	UPROPERTY(Category = "Components", VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	UBPlayerMovementComponent* PlayerMovementComp;
 
@@ -65,6 +73,16 @@ private:
 	float RightMovementFactor;
 
 
+	/** Status */
+private:
+	UFUNCTION()
+	void OnHealthChanged(AActor* InstigatorActor, UBStatusComponent* OwningStatusComp, float NewHealth, float DeltaHealth);
+
+	UPROPERTY(Category = "Components", VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UBStatusComponent* StatusComp;
+
+
+	/** Action */
 private:
 
 	void PrimaryAttackStart();
@@ -79,9 +97,12 @@ private:
 	UFUNCTION()
 	void OnPrimaryAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
-	UPROPERTY()
+	UPROPERTY(Category = "Components", VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UBActionComponent* ActionComp;
+
+	UPROPERTY(Category = "Action", VisibleAnywhere, BlueprintReadOnly, Meta = (AllowPrivateAccess = "true"))
 	UBPlayerAnimInstance* PlayerAnimInstance;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Attack, Meta = (AllowPrivateAccess = true))
+	UPROPERTY(Category = "Action", VisibleAnywhere, BlueprintReadOnly, Meta = (AllowPrivateAccess = "true"))
 	bool IsAttacking;
 };

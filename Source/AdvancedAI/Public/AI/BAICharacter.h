@@ -6,24 +6,34 @@
 #include "GameFramework/Character.h"
 #include "BAICharacter.generated.h"
 
+
+class UBStatusComponent;
+class UBActionComponent;
+
+
 UCLASS()
 class ADVANCEDAI_API ABAICharacter : public ACharacter
 {
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
 	ABAICharacter();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
 
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	/** Status */
+private:
+	UFUNCTION()
+	void OnHealthChanged(AActor* InstigatorActor, UBStatusComponent* OwningStatusComp, float NewHealth, float DeltaHealth);
 
+	UPROPERTY(Category = "Components", VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UBStatusComponent* StatusComp;
+
+	/** Action */
+private:
+
+	UPROPERTY(Category = "Components", VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UBActionComponent* ActionComp;
 };

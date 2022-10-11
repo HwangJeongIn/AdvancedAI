@@ -2,33 +2,27 @@
 
 
 #include "AI/BAICharacter.h"
+#include "BStatusComponent.h"
+#include "BActionComponent.h"
 
-// Sets default values
+
 ABAICharacter::ABAICharacter()
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	/** Status */
+	StatusComp = CreateDefaultSubobject<UBStatusComponent>("StatusComp");
 
+	/** Action */
+	ActionComp = CreateDefaultSubobject<UBActionComponent>("ActionComp");
 }
 
-// Called when the game starts or when spawned
 void ABAICharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	StatusComp->OnHealthChanged.AddDynamic(this, &ABAICharacter::OnHealthChanged);
 }
 
-// Called every frame
-void ABAICharacter::Tick(float DeltaTime)
+void ABAICharacter::OnHealthChanged(AActor* InstigatorActor, UBStatusComponent* OwningStatusComp, float NewHealth, float DeltaHealth)
 {
-	Super::Tick(DeltaTime);
 
 }
-
-// Called to bind functionality to input
-void ABAICharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-}
-
