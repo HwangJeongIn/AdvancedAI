@@ -17,13 +17,13 @@ class ADVANCEDAI_API UBStatusComponent : public UActorComponent
 
 public:
 
+	UBStatusComponent();
+
 	UFUNCTION(Category = "Status", BlueprintCallable)
 	static UBStatusComponent* GetStatus(AActor* Actor);
 
 	UFUNCTION(Category = "Status", BlueprintCallable)
 	static bool IsAliveActor(AActor* Actor);
-
-	UBStatusComponent();
 
 public:
 

@@ -10,35 +10,34 @@
 #include "Net/UnrealNetwork.h"
 
 
-static int32 PrintPlayerMovementComponentVelocity = 1;
+static int32 PrintPlayerMovementComponent = 0;
+FAutoConsoleVariableRef CVARDebugPrintPlayerMovementComponent(
+	TEXT("B.PrintPlayerMovementComponent"),
+	PrintPlayerMovementComponent,
+	TEXT("Print Player Movement Log"),
+	ECVF_Cheat);
+
+static int32 PrintPlayerMovementComponentVelocity = 0;
 FAutoConsoleVariableRef CVARDebugPrintPlayerMovementComponentVelocity(
 	TEXT("B.PrintPlayerMovementComponentVelocity"),
 	PrintPlayerMovementComponentVelocity,
 	TEXT("Print Player Movement Velocity Log"),
 	ECVF_Cheat);
 
-static int32 PrintPlayerMovementComponentRotation = 1;
+static int32 PrintPlayerMovementComponentRotation = 0;
 FAutoConsoleVariableRef CVARDebugPrintPlayerMovementComponentRotation(
 	TEXT("B.PrintPlayerMovementComponentRotation"),
 	PrintPlayerMovementComponentRotation,
 	TEXT("Print Player Movement Rotation Log"),
 	ECVF_Cheat);
 
-static int32 PrintPlayerMovementComponentClientInterpolation = 1;
-FAutoConsoleVariableRef CVARDebugPrintPlayerMovementComponentClientInterpolation(
-	TEXT("B.PrintPlayerMovementComponentClientInterpolation"),
-	PrintPlayerMovementComponentClientInterpolation,
-	TEXT("Print Player Movement Client Interpolation Log"),
-	ECVF_Cheat);
-
-
-
 static int32 PrintPlayerMovementComponentReplication = 1;
 FAutoConsoleVariableRef CVARDebugPrintPlayerMovementComponentReplication(
 	TEXT("B.PrintPlayerMovementComponentReplication"),
 	PrintPlayerMovementComponentReplication,
-	TEXT("Print Player Movement Replication Log"),
+	TEXT("Print Player Movement Client Replocation Log"),
 	ECVF_Cheat);
+
 
 
 UBPlayerMovementComponent::UBPlayerMovementComponent()
@@ -222,7 +221,7 @@ bool UBPlayerMovementComponent::GetSharedWorldTime(float& SharedWorldTime) const
 
 void UBPlayerMovementComponent::ServerMove_Implementation(FPlayerMovementObject MovementObject)
 {
-	if (PrintPlayerMovementComponentClientInterpolation)
+	if (PrintPlayerMovementComponentReplication)
 	{
 		//B_LOG_DEV("ServerMove_Implementation=============================================================");
 		//MovementObject.Print();
@@ -261,7 +260,7 @@ bool UBPlayerMovementComponent::ServerMove_Validate(FPlayerMovementObject Moveme
 
 void UBPlayerMovementComponent::UpdateMovementState(const FPlayerMovementObject& MovementObject)
 {
-	if (PrintPlayerMovementComponentClientInterpolation)
+	if (PrintPlayerMovementComponent && PrintPlayerMovementComponentReplication)
 	{
 		//B_LOG_DEV("UpdateMovementState=============================================================");
 	}
@@ -275,7 +274,7 @@ void UBPlayerMovementComponent::UpdateMovementState(const FPlayerMovementObject&
 
 void UBPlayerMovementComponent::OnRep_MovementState()
 {
-	if (PrintPlayerMovementComponentClientInterpolation)
+	if (PrintPlayerMovementComponent && PrintPlayerMovementComponentReplication)
 	{
 		B_LOG_DEV("OnRep_MovementState=============================================================");
 	}
@@ -320,7 +319,7 @@ void UBPlayerMovementComponent::OnRep_MovementState()
 
 void UBPlayerMovementComponent::UpdateSimulatedProxyFromMovementState(float FromServerToClientTime /* RTT / 2 */)
 {
-	if (PrintPlayerMovementComponentClientInterpolation)
+	if (PrintPlayerMovementComponent && PrintPlayerMovementComponentReplication)
 	{
 		B_LOG_DEV("UpdateSimulatedProxyFromMovementState=============================================================");
 	}
@@ -361,7 +360,7 @@ void UBPlayerMovementComponent::UpdateSimulatedProxyFromMovementState(float From
 	CurrentInterpolationTime = 0.0f;
 	//InterpolationRatio = 0.0f;
 
-	if (PrintPlayerMovementComponentClientInterpolation)
+	if (PrintPlayerMovementComponent && PrintPlayerMovementComponentReplication)
 	{
 		B_LOG_DEV("InterpolationCompletionTime : %.6f", InterpolationCompletionTime);
 		B_LOG_DEV("StartLocation : %.1f, %.1f, %.1f", CubicSpline.StartLocation.X, CubicSpline.StartLocation.Y, CubicSpline.StartLocation.Z);
@@ -417,7 +416,7 @@ void UBPlayerMovementComponent::InterpolateFromClient(float DeltaTime)
 		const FQuat NewRotation = FQuat::Slerp(StartRotation, TargetRotation, InterpolationRatio);
 		OwnerActor->SetActorRotation(NewRotation);
 
-		if (PrintPlayerMovementComponentClientInterpolation)
+		if (PrintPlayerMovementComponent && PrintPlayerMovementComponentReplication)
 		{
 			B_LOG_DEV("Interpolating=========================================================================================");
 			B_LOG_DEV("InterpolationRatio : %.1f", InterpolationRatio);
@@ -433,7 +432,7 @@ void UBPlayerMovementComponent::InterpolateFromClient(float DeltaTime)
 		OwnerActor->SetActorLocation(CurrentActorLocation);
 		SetVelocity(CurrentVelocity);
 
-		if (PrintPlayerMovementComponentClientInterpolation)
+		if (PrintPlayerMovementComponent && PrintPlayerMovementComponentReplication)
 		{
 			B_LOG_DEV("Simulating By DeadReckoning=========================================================================================");
 		}
@@ -442,7 +441,7 @@ void UBPlayerMovementComponent::InterpolateFromClient(float DeltaTime)
 
 void UBPlayerMovementComponent::UpdateAutonomousProxyFromMovementState(float FromServerToClientTime /* RTT / 2 */)
 {
-	if (PrintPlayerMovementComponentClientInterpolation)
+	if (PrintPlayerMovementComponent && PrintPlayerMovementComponentReplication)
 	{
 		B_LOG_DEV("UpdateAutonomousProxyFromMovementState=============================================================");
 	}
@@ -546,7 +545,7 @@ void UBPlayerMovementComponent::SimulateMovementObject(const FPlayerMovementObje
 	const float ForwardMovementFactor = MovementObject.ForwardMovementFactor;
 	const float RightMovementFactor = MovementObject.RightMovementFactor;
 
-	if (PrintPlayerMovementComponentVelocity)
+	if (PrintPlayerMovementComponent && PrintPlayerMovementComponentVelocity)
 	{
 		B_LOG_DEV("%.1f, %.1f", ForwardMovementFactor, RightMovementFactor);
 	}
@@ -586,7 +585,7 @@ void UBPlayerMovementComponent::ApplyResistanceToVelocity(float DeltaTime)
 	}
 
 	const FVector DeltaResistanceVelocity = -Velocity.GetSafeNormal() * DeltaResistanceVelocityScalar;
-	if (PrintPlayerMovementComponentVelocity)
+	if (PrintPlayerMovementComponent && PrintPlayerMovementComponentVelocity)
 	{
 		B_LOG_DEV("ApplyResistanceToVelocity=========================================================================================");
 		B_LOG_DEV("PrevVelocity : %.1f, %.1f, %.1f", Velocity.X, Velocity.Y, Velocity.Z);
@@ -600,7 +599,7 @@ void UBPlayerMovementComponent::ApplyResistanceToVelocity(float DeltaTime)
 
 	Velocity = Velocity + DeltaResistanceVelocity;
 
-	if (PrintPlayerMovementComponentVelocity)
+	if (PrintPlayerMovementComponent && PrintPlayerMovementComponentVelocity)
 	{
 		B_LOG_DEV("CurrentVelocity : %.1f, %.1f, %.1f", Velocity.X, Velocity.Y, Velocity.Z);
 	}
@@ -626,7 +625,7 @@ void UBPlayerMovementComponent::ApplyInputToVelocity(float DeltaTime, float Forw
 	const FVector InputDeltaVelocity = InputWorldDirection * AccelerationScalar * DeltaTime;
 	Velocity = Velocity + InputDeltaVelocity;
 
-	if (PrintPlayerMovementComponentVelocity)
+	if (PrintPlayerMovementComponent && PrintPlayerMovementComponentVelocity)
 	{
 		B_LOG_DEV("ApplyInputToVelocity=========================================================================================");
 		B_LOG_DEV("InputWorldDirection : %.1f, %.1f, %.1f", InputWorldDirection.X, InputWorldDirection.Y, InputWorldDirection.Z);
@@ -705,7 +704,7 @@ void UBPlayerMovementComponent::UpdateRotation(float DeltaTranslationScalar, con
 		const FRotator DeltaRotation(0.0f, DeltaYaw, 0.0f);
 		Velocity = DeltaRotation.RotateVector(Velocity);
 
-		if (PrintPlayerMovementComponentRotation)
+		if (PrintPlayerMovementComponent && PrintPlayerMovementComponentRotation)
 		{
 			B_LOG_DEV("=============================================================");
 			B_LOG_DEV("RemainingYaw : % .1f", RemainingYaw);
