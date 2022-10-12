@@ -14,4 +14,7 @@ class ADVANCEDAI_API UBAction_Sprint : public UBAction
 {
 	GENERATED_BODY()
 	
+public:
+	virtual void Start(AActor* InstigatorActor) override;
+	virtual void Stop(AActor* InstigatorActor) override;
 };

@@ -190,22 +190,19 @@ void ABPlayer::OnHealthChanged(AActor* InstigatorActor, UBStatusComponent* Ownin
 	}
 }
 
+UBPlayerAnimInstance* ABPlayer::GetPlayerAnimInstance()
+{
+	return PlayerAnimInstance;
+}
+
 void ABPlayer::PrimaryAttackStart()
 {
-	B_LOG_DEV("PrimaryAttackStart")
-	if (PlayerAnimInstance)
-	{
-		B_LOG_DEV("PrimaryAttackStart1")
-		PlayerAnimInstance->PlayPrimaryAttackMontage();
-	}
+	ActionComp->StartActionByName(this, "PrimaryAttack");
 }
 
 void ABPlayer::PrimaryAttackStop()
 {
-	if (PlayerAnimInstance)
-	{
-		//PlayerAnimInstance->PlayPrimaryAttackMontage();
-	}
+	ActionComp->StopActionByName(this, "PrimaryAttack");
 }
 
 void ABPlayer::SecondaryAttack()

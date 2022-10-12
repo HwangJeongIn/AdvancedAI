@@ -33,14 +33,14 @@ void UBAction::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLi
 	DOREPLIFETIME(UBAction, ActionComp);
 }
 
-UBActionComponent* UBAction::GetOwningActionComponent() const
-{
-	return ActionComp;
-}
-
 void UBAction::Initialize(UBActionComponent* NewActionComp)
 {
 	ActionComp = NewActionComp;
+}
+
+UBActionComponent* UBAction::GetOwningActionComponent() const
+{
+	return ActionComp;
 }
 
 bool UBAction::IsRunning() const

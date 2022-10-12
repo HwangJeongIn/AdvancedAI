@@ -79,8 +79,10 @@ private:
 
 
 	/** Action */
-private:
+public:
+	UBPlayerAnimInstance* GetPlayerAnimInstance();
 
+private:
 	void PrimaryAttackStart();
 	void PrimaryAttackStop();
 

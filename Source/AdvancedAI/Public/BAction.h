@@ -11,6 +11,16 @@ class UWorld;
 class UBActionComponent;
 
 
+
+UENUM(BlueprintType)
+enum class EActionType : uint8
+{
+	PrimaryAttack,
+	SecondaryAttack,
+	Sprint,
+	AIPrimaryAttack
+};
+
 USTRUCT()
 struct FActionBasicRunningData
 {
@@ -24,11 +34,10 @@ public:
 	AActor* InstigatorActor;
 };
 
-
 /**
  * 
  */
-UCLASS()
+UCLASS(Blueprintable)
 class ADVANCEDAI_API UBAction : public UObject
 {
 	GENERATED_BODY()
@@ -54,16 +63,18 @@ public:
 
 	UWorld* GetWorld() const override;
 
-private:
-
+public:
+	virtual void Initialize(UBActionComponent* NewActionComp);	
+	
 	UFUNCTION(Category = "Action", BlueprintCallable)
 	UBActionComponent* GetOwningActionComponent() const;
 
+private:
 	UPROPERTY(Replicated)
 	UBActionComponent* ActionComp;
 
+
 public:
-	void Initialize(UBActionComponent* NewActionComp);
 
 	bool IsRunning() const;
 	bool CanStart(AActor* InstigatorActor) const;
@@ -74,13 +85,16 @@ public:
 
 	bool Compare(const FName& InputName) const;
 
-private:
+protected:
 	UFUNCTION()
 	void OnRep_BasicRunningData();
 
 	UPROPERTY(ReplicatedUsing = "OnRep_BasicRunningData")
 	FActionBasicRunningData BasicRunningData;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Action")
+	UPROPERTY(Category = "Action", EditDefaultsOnly)
+	EActionType ActionType;
+	
+	UPROPERTY(Category = "Action", EditDefaultsOnly)
 	FName ActionName;
 };
