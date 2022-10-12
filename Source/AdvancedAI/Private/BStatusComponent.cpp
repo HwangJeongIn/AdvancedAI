@@ -78,6 +78,7 @@ bool UBStatusComponent::ChangeHealth(AActor * Instigator, float DeltaHealth)
 	{
 		Health = NewHealth;
 		MulticastHealthChanged(Instigator, Health, FinalDeltaHealth);
+		B_LOG_DEV("Current Health : %.1f", Health);
 	}
 
 	return true;

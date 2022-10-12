@@ -14,6 +14,7 @@ UBActionComponent::UBActionComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 
+	IsInitialized = false;
 	SetIsReplicatedByDefault(true);
 }
 
@@ -84,6 +85,22 @@ void UBActionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
+void UBActionComponent::InitializeActions()
+{
+	for (UBAction* Action : ActivatedActions)
+	{
+		B_ASSERT_DEV(Action, "왜 발생하는 지 확인해야합니다.");
+		if (nullptr == Action)
+		{
+			continue;
+		}
+
+		Action->Initialize(this);
+	}
+
+	IsInitialized = true;
+}
+
 void UBActionComponent::AddAction(AActor* Instigator, TSubclassOf<UBAction> ActionClass)
 {
 	if (nullptr == ActionClass)
@@ -106,13 +123,16 @@ void UBActionComponent::AddAction(AActor* Instigator, TSubclassOf<UBAction> Acti
 		return;
 	}
 
-	NewAction->Initialize(this);
+	if (true == IsInitialized)
+	{
+		NewAction->Initialize(this);
+	}
 	ActivatedActions.Add(NewAction);
 }
 
 void UBActionComponent::RemoveAction(UBAction* ActionToRemove)
 {
-	if (!ensure(ActionToRemove && !ActionToRemove->IsRunning()))
+	if (nullptr == ActionToRemove || true == ActionToRemove->IsRunning())
 	{
 		return;
 	}
@@ -154,6 +174,11 @@ UBAction* UBActionComponent::GetActionByName(const FName& ActionName) const
 
 bool UBActionComponent::StartActionByName(AActor* Instigator, const FName& ActionName)
 {
+	if (false == IsInitialized)
+	{
+		return false;
+	}
+
 	UBAction* TargetAction = GetActionByName(ActionName);
 	if (nullptr == TargetAction)
 	{
@@ -179,6 +204,11 @@ bool UBActionComponent::StartActionByName(AActor* Instigator, const FName& Actio
 
 bool UBActionComponent::StopActionByName(AActor* Instigator, const FName& ActionName)
 {
+	if (false == IsInitialized)
+	{
+		return false;
+	}
+
 	UBAction* TargetAction = GetActionByName(ActionName);
 	if (nullptr == TargetAction)
 	{

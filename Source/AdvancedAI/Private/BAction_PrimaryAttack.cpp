@@ -6,6 +6,15 @@
 #include "BPlayerAnimInstance.h"
 #include "BActionComponent.h"
 #include "BStatusComponent.h"
+#include "DrawDebugHelpers.h"
+
+
+static int32 PrintPrimaryAttack = 1;
+FAutoConsoleVariableRef CVARDebugPrintPrimaryAttack(
+	TEXT("B.PrintPrimaryAttack"),
+	PrintPrimaryAttack,
+	TEXT("Print Primary Attack"),
+	ECVF_Cheat);
 
 
 void UBAction_PrimaryAttack::Initialize(UBActionComponent* NewActionComp)
@@ -20,10 +29,9 @@ void UBAction_PrimaryAttack::Initialize(UBActionComponent* NewActionComp)
 	}
 
 	UBPlayerAnimInstance* PlayerAnimInstance = Player->GetPlayerAnimInstance();
-	//PlayerAnimInstance->OnPrimaryAttackHit.AddDynamic(this, &UBAction_PrimaryAttack::OnPrimaryAttackHit);
-	//PlayerAnimInstance->OnNextPrimaryAttackCheck.AddDynamic(this, &UBAction_PrimaryAttack::OnNextPrimaryAttackCheck);
+	PlayerAnimInstance->OnPrimaryAttackHit.AddDynamic(this, &UBAction_PrimaryAttack::OnPrimaryAttackHit);
+	PlayerAnimInstance->OnNextPrimaryAttackCheck.AddDynamic(this, &UBAction_PrimaryAttack::OnNextPrimaryAttackCheck);
 
-	MaxSectionIndex = 2;
 	Clear();
 }
 
@@ -60,7 +68,6 @@ void UBAction_PrimaryAttack::OnPrimaryAttackHit()
 		return;
 	}
 
-
 	ABPlayer* Player = Cast<ABPlayer>(GetOwningActionComponent()->GetOwner());
 	if (nullptr == Player)
 	{
@@ -68,18 +75,23 @@ void UBAction_PrimaryAttack::OnPrimaryAttackHit()
 		return;
 	}
 
-	FVector ActionStartLocation = Player->GetActorLocation() + Player->GetActorForwardVector() * 5.0f;
-	FVector ActionEndLocation = ActionStartLocation + Player->GetActorForwardVector() * 5.0f;
+	const FVector Direction = Player->GetActorForwardVector();
+	const FVector ActionStartLocation = Player->GetActorLocation() + Direction * ActionOffset;
+	const FVector ActionEndLocation = ActionStartLocation + Direction * ActionRange;
 
 	FCollisionShape Shape;
-	Shape.SetSphere(20.0f);
+	Shape.SetSphere(SweepRadius);
 
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(Player);
 
 	FHitResult Hit;
-	if (GetWorld()->SweepSingleByChannel(Hit, ActionStartLocation, ActionEndLocation, FQuat::Identity, ECC_GameTraceChannel1, Shape, Params))
+
+	const bool Result = GetWorld()->SweepSingleByChannel(Hit, ActionStartLocation, ActionEndLocation, FQuat::Identity, ECC_GameTraceChannel1, Shape, Params);
+
+	if (true == Result)
 	{
+
 		if (false == Hit.Actor.IsValid())
 		{
 			return;
@@ -91,6 +103,23 @@ void UBAction_PrimaryAttack::OnPrimaryAttackHit()
 			StatusComp->ChangeHealth(Player, -50.0f);
 		}
 	}
+
+	if (PrintPrimaryAttack)
+	{
+		const FVector RangeCenter = (ActionStartLocation + ActionEndLocation) * 0.5f;
+		const float HalfLength = ActionRange * 0.5f + SweepRadius;
+		FColor DrawColor = true == Result ? FColor::Green : FColor::Red;
+
+		DrawDebugCapsule(GetWorld()
+			, RangeCenter
+			, HalfLength
+			, SweepRadius
+			, FRotationMatrix::MakeFromZ(Direction).ToQuat()
+			, DrawColor
+			, false
+			, 5.0f);
+	}
+
 }
 
 void UBAction_PrimaryAttack::OnNextPrimaryAttackCheck()

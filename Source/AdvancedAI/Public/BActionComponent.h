@@ -32,6 +32,11 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 public:
+	void InitializeActions();
+
+	bool IsInitialized;
+
+
 	UFUNCTION(Category = "Actions", BlueprintCallable)
 	void AddAction(AActor* Instigator, TSubclassOf<UBAction> ActionClass);
 

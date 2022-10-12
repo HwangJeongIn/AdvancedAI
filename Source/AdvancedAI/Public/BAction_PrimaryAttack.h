@@ -33,5 +33,16 @@ private:
 	void OnNextPrimaryAttackCheck();
 
 	int32 SectionIndex;
-	int32 MaxSectionIndex;
+
+	UPROPERTY(Category = "AttackAction", EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	int32 MaxSectionIndex = 3;
+
+	UPROPERTY(Category = "AttackAction", EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	float SweepRadius = 20.0f;
+
+	UPROPERTY(Category = "AttackAction", EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	float ActionRange = 20.0f;
+
+	UPROPERTY(Category = "AttackAction", EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	float ActionOffset = 5.0f;
 };

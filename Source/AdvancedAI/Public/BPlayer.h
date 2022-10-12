@@ -82,6 +82,8 @@ private:
 public:
 	UBPlayerAnimInstance* GetPlayerAnimInstance();
 
+	void InitializeActionComponent();
+
 private:
 	void PrimaryAttackStart();
 	void PrimaryAttackStop();

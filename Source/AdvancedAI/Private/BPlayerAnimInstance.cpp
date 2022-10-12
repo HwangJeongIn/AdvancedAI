@@ -3,6 +3,7 @@
 
 #include "BPlayerAnimInstance.h"
 #include "BAction.h"
+#include "BPlayer.h"
 
 
 void UBPlayerAnimInstance::PlayMontage(EActionType PlayerActionType)

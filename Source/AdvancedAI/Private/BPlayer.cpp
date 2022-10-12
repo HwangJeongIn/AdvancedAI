@@ -97,6 +97,7 @@ void ABPlayer::BeginPlay()
 	if (PlayerAnimInstance)
 	{
 		PlayerAnimInstance->OnMontageEnded.AddDynamic(this, &ABPlayer::OnPrimaryAttackMontageEnded);
+		InitializeActionComponent();
 	}
 
 	StatusComp->OnHealthChanged.AddDynamic(this, &ABPlayer::OnHealthChanged);
@@ -193,6 +194,11 @@ void ABPlayer::OnHealthChanged(AActor* InstigatorActor, UBStatusComponent* Ownin
 UBPlayerAnimInstance* ABPlayer::GetPlayerAnimInstance()
 {
 	return PlayerAnimInstance;
+}
+
+void ABPlayer::InitializeActionComponent()
+{
+	ActionComp->InitializeActions();
 }
 
 void ABPlayer::PrimaryAttackStart()

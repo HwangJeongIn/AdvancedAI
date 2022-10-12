@@ -23,7 +23,6 @@ public:
 	void StopMontage(EActionType PlayerActionType);
 
 	void MontageJumpToSection(EActionType PlayerActionType, int32 SectionIndex);
-
 private:
 
 	FName SectionIndexToName(EActionType PlayerActionType, int32 SectionIndex);
