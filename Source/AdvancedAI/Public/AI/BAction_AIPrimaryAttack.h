@@ -4,17 +4,15 @@
 
 #include "CoreMinimal.h"
 #include "BAction.h"
-#include "BAction_PrimaryAttack.generated.h"
-
+#include "BAction_AIPrimaryAttack.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class ADVANCEDAI_API UBAction_PrimaryAttack : public UBAction
+class ADVANCEDAI_API UBAction_AIPrimaryAttack : public UBAction
 {
 	GENERATED_BODY()
-	
 public:
 	virtual void Initialize(UBActionComponent* NewActionComp) override;
 
@@ -24,18 +22,8 @@ public:
 
 private:
 
-	void Clear();
-
 	UFUNCTION()
-	void OnPrimaryAttackHit();
-
-	UFUNCTION()
-	void OnNextPrimaryAttackCheck();
-
-	int32 SectionIndex;
-
-	UPROPERTY(Category = "AttackAction", EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	int32 MaxSectionIndex = 3;
+	void OnAIPrimaryAttackHit();
 
 	UPROPERTY(Category = "AttackAction", EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	float SweepRadius = 20.0f;

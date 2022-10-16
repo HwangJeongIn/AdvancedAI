@@ -100,7 +100,7 @@ void UBAction_PrimaryAttack::OnPrimaryAttackHit()
 		UBStatusComponent* StatusComp = UBStatusComponent::GetStatus(Hit.Actor.Get());
 		if (StatusComp)
 		{
-			StatusComp->ChangeHealth(Player, -50.0f);
+			StatusComp->ChangeHealth(Player, -Damage);
 		}
 	}
 

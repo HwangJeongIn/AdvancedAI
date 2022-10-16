@@ -4,36 +4,27 @@
 
 #include "CoreMinimal.h"
 #include "BAnimInstance.h"
-#include "BPlayerAnimInstance.generated.h"
-
+#include "BAIAnimInstance.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class ADVANCEDAI_API UBPlayerAnimInstance : public UBAnimInstance
+class ADVANCEDAI_API UBAIAnimInstance : public UBAnimInstance
 {
 	GENERATED_BODY()
-
 protected:
 	virtual UAnimMontage* GetMontageByActionType(EActionType PlayerActionType) override;
 
 private:
-	
-	UFUNCTION()
-	void AnimNotify_NextPrimaryAttackCheck();
 
 	UFUNCTION()
-	void AnimNotify_PrimaryAttackHitCheck();
+	void AnimNotify_AIPrimaryAttackHitCheck();
 
 	UPROPERTY(Category = "AttackAction", EditDefaultsOnly, BlueprintReadOnly, Meta = (AllowPrivateAccess = true))
-	UAnimMontage* PrimaryAttackMontage;
+	UAnimMontage* AIPrimaryAttackMontage;
 
 public:
 	UPROPERTY(Category = "AttackAction", BlueprintAssignable)
-	FOnActionAnimationStateChanged OnNextPrimaryAttackCheck;
-	
-	UPROPERTY(Category = "AttackAction", BlueprintAssignable)
-	FOnActionAnimationStateChanged OnPrimaryAttackHit;
-
+	FOnActionAnimationStateChanged OnAIPrimaryAttackHit;
 };
