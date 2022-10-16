@@ -172,7 +172,7 @@ UBAction* UBActionComponent::GetActionByName(const FName& ActionName) const
 	return nullptr;
 }
 
-bool UBActionComponent::StartActionByName(AActor* Instigator, const FName& ActionName)
+bool UBActionComponent::StartActionByName(AActor* Instigator, const FName& ActionName, bool WithoutActionStateValidation /*= false*/)
 {
 	if (false == IsInitialized)
 	{
@@ -188,8 +188,12 @@ bool UBActionComponent::StartActionByName(AActor* Instigator, const FName& Actio
 
 	if (false == TargetAction->CanStart(Instigator))
 	{
-		B_ASSERT_DEV(false, "비정상입니다.");
-		return false;
+		if (false == WithoutActionStateValidation)
+		{
+			B_ASSERT_DEV(false, "비정상입니다.");
+			return false;
+		}
+		return true;
 	}
 
 	if (false == GetOwner()->HasAuthority())
@@ -201,8 +205,12 @@ bool UBActionComponent::StartActionByName(AActor* Instigator, const FName& Actio
 	return true;
 }
 
+bool UBActionComponent::StartActionByNameIfCan(AActor* Instigator, const FName& ActionName)
+{
+	return StartActionByName(Instigator, ActionName, true);
+}
 
-bool UBActionComponent::StopActionByName(AActor* Instigator, const FName& ActionName)
+bool UBActionComponent::StopActionByName(AActor* Instigator, const FName& ActionName, bool WithoutActionStateValidation /*= false*/)
 {
 	if (false == IsInitialized)
 	{
@@ -218,7 +226,11 @@ bool UBActionComponent::StopActionByName(AActor* Instigator, const FName& Action
 
 	if (false == TargetAction->CanStop(Instigator))
 	{
-		B_ASSERT_DEV(false, "비정상입니다.");
+		if (false == WithoutActionStateValidation)
+		{
+			B_ASSERT_DEV(false, "비정상입니다.");
+			return true;
+		}
 		return false;
 	}
 
@@ -229,6 +241,11 @@ bool UBActionComponent::StopActionByName(AActor* Instigator, const FName& Action
 
 	TargetAction->Stop(Instigator);
 	return true;
+}
+
+bool UBActionComponent::StopActionByNameIfCan(AActor* Instigator, const FName& ActionName)
+{
+	return StopActionByName(Instigator, ActionName, true);
 }
 
 

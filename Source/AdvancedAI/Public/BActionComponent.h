@@ -50,10 +50,17 @@ public:
 	UBAction* GetActionByName(const FName& ActionName) const;
 
 	UFUNCTION(Category = "Actions", BlueprintCallable)
-	bool StartActionByName(AActor* Instigator, const FName& ActionName);
+	bool StartActionByName(AActor* Instigator, const FName& ActionName, bool WithoutActionStateValidation = false);
 
 	UFUNCTION(Category = "Actions", BlueprintCallable)
-	bool StopActionByName(AActor* Instigator, const FName& ActionName);
+	bool StartActionByNameIfCan(AActor* Instigator, const FName& ActionName);
+
+	UFUNCTION(Category = "Actions", BlueprintCallable)
+	bool StopActionByName(AActor* Instigator, const FName& ActionName, bool WithoutActionStateValidation = false);
+
+	UFUNCTION(Category = "Actions", BlueprintCallable)
+	bool StopActionByNameIfCan(AActor* Instigator, const FName& ActionName);
+
 
 private:
 

@@ -23,7 +23,14 @@ void UBBTService_UpdateAIState::TickNode(UBehaviorTreeComponent& OwnerComp, uint
 {
 	Super::TickNode(OwnerComp, NodeMemory, DeltaSeconds);
 
-	APawn* SelfPawn = OwnerComp.GetAIOwner()->GetPawn();
+	AAIController* SelfController = OwnerComp.GetAIOwner();
+	if (nullptr == SelfController)
+	{
+		B_ASSERT_DEV(false, " 비정상입니다 ");
+		return;
+	}
+
+	APawn* SelfPawn = SelfController->GetPawn();
 	if (nullptr == SelfPawn)
 	{
 		B_ASSERT_DEV(false, " 비정상입니다 ");
