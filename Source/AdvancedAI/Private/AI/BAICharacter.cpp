@@ -5,6 +5,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "BStatusComponent.h"
 #include "BActionComponent.h"
+#include "AI/BSightComponent.h"
 
 
 
@@ -19,6 +20,9 @@ ABAICharacter::ABAICharacter()
 
 	/** Action */
 	ActionComp = CreateDefaultSubobject<UBActionComponent>("ActionComp");
+
+	/** Sight */
+	SightComp = CreateDefaultSubobject<UBSightComponent>("SightComp");
 }
 
 void ABAICharacter::BeginPlay()

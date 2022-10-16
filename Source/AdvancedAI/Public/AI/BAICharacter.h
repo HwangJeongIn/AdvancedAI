@@ -9,6 +9,7 @@
 
 class UBStatusComponent;
 class UBActionComponent;
+class UBSightComponent;
 
 
 UCLASS()
@@ -36,4 +37,10 @@ private:
 
 	UPROPERTY(Category = "Components", VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	UBActionComponent* ActionComp;
+
+
+	/** Sight */
+private:
+	UPROPERTY(Category = "Components", VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UBSightComponent* SightComp;
 };
