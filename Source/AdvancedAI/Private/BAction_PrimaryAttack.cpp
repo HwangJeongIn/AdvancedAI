@@ -29,24 +29,29 @@ void UBAction_PrimaryAttack::Initialize(UBActionComponent* NewActionComp)
 	}
 
 	UBPlayerAnimInstance* PlayerAnimInstance = Player->GetPlayerAnimInstance();
-	PlayerAnimInstance->OnPrimaryAttackHit.AddDynamic(this, &UBAction_PrimaryAttack::OnPrimaryAttackHit);
 	PlayerAnimInstance->OnNextPrimaryAttackCheck.AddDynamic(this, &UBAction_PrimaryAttack::OnNextPrimaryAttackCheck);
+	PlayerAnimInstance->OnPrimaryAttackHitCheck.AddDynamic(this, &UBAction_PrimaryAttack::OnPrimaryAttackHitCheck);
 
 	Clear();
 }
 
 void UBAction_PrimaryAttack::Start(AActor* InstigatorActor)
 {
-	ABPlayer* Target = Cast<ABPlayer>(InstigatorActor);
-	if (Target)
+	ABPlayer* Player = Cast<ABPlayer>(InstigatorActor);
+	if (nullptr == Player)
 	{
-		UBPlayerAnimInstance* PlayerAnimInstance = Target->GetPlayerAnimInstance();
-		if (PlayerAnimInstance)
-		{
-			PlayerAnimInstance->PlayMontage(ActionType);
-		}
+		B_ASSERT_DEV(false, "Player 가 없습니다.");
+		return;
 	}
 
+	UBPlayerAnimInstance* PlayerAnimInstance = Player->GetPlayerAnimInstance();
+	if (nullptr == PlayerAnimInstance)
+	{
+		B_ASSERT_DEV(false, "AnimInstance 가 없습니다.");
+		return;
+	}
+
+	PlayerAnimInstance->PlayMontage(ActionType);
 	Super::Start(InstigatorActor);
 }
 
@@ -61,7 +66,33 @@ void UBAction_PrimaryAttack::Clear()
 	SectionIndex = 0;
 }
 
-void UBAction_PrimaryAttack::OnPrimaryAttackHit()
+void UBAction_PrimaryAttack::OnNextPrimaryAttackCheck()
+{
+	if (false == IsRunning())
+	{
+		return;
+	}
+
+	SectionIndex = (SectionIndex + 1) % MaxSectionIndex;
+
+	ABPlayer* Player = Cast<ABPlayer>(GetOwningActionComponent()->GetOwner());
+	if (nullptr == Player)
+	{
+		B_ASSERT_DEV(false, "플레이어가 없습니다.");
+		return;
+	}
+
+	UBPlayerAnimInstance* PlayerAnimInstance = Player->GetPlayerAnimInstance();
+	if (nullptr == PlayerAnimInstance)
+	{
+		B_ASSERT_DEV(false, "AnimInstance 가 없습니다.");
+		return;
+	}
+
+	PlayerAnimInstance->MontageJumpToSection(ActionType, SectionIndex);
+}
+
+void UBAction_PrimaryAttack::OnPrimaryAttackHitCheck()
 {
 	if (false == IsRunning())
 	{
@@ -121,23 +152,3 @@ void UBAction_PrimaryAttack::OnPrimaryAttackHit()
 	}
 
 }
-
-void UBAction_PrimaryAttack::OnNextPrimaryAttackCheck()
-{
-	if (false == IsRunning())
-	{
-		return;
-	}
-
-	SectionIndex = (SectionIndex + 1) % MaxSectionIndex;
-
-	ABPlayer* Player = Cast<ABPlayer>(GetOwningActionComponent()->GetOwner());
-	if (nullptr == Player)
-	{
-		B_ASSERT_DEV(false, "플레이어가 없습니다.");
-		return;
-	}
-
-	Player->GetPlayerAnimInstance()->MontageJumpToSection(ActionType, SectionIndex);
-}
-

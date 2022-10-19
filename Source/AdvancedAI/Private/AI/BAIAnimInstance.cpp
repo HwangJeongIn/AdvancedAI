@@ -15,7 +15,12 @@ UAnimMontage* UBAIAnimInstance::GetMontageByActionType(EActionType PlayerActionT
     }
 }
 
+void UBAIAnimInstance::AnimNotify_NextAIPrimaryAttackCheck()
+{
+    OnNextAIPrimaryAttackCheck.Broadcast();
+}
+
 void UBAIAnimInstance::AnimNotify_AIPrimaryAttackHitCheck()
 {
-    OnAIPrimaryAttackHit.Broadcast();
+    OnAIPrimaryAttackHitCheck.Broadcast();
 }

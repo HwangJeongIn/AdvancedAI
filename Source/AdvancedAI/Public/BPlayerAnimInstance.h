@@ -34,6 +34,6 @@ public:
 	FOnActionAnimationStateChanged OnNextPrimaryAttackCheck;
 	
 	UPROPERTY(Category = "AttackAction", BlueprintAssignable)
-	FOnActionAnimationStateChanged OnPrimaryAttackHit;
+	FOnActionAnimationStateChanged OnPrimaryAttackHitCheck;
 
 };

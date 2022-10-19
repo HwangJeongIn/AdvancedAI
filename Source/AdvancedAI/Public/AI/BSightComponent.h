@@ -7,7 +7,7 @@
 #include "BSightComponent.generated.h"
 
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSee, AActor*, Target);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSee, AActor*, InActor);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class ADVANCEDAI_API UBSightComponent : public UActorComponent
@@ -61,11 +61,11 @@ public:
 
 private:
 	UFUNCTION()
-	void OnSeeTest(AActor* Target);
+	void OnSeeTest(AActor* InActor);
 
-	void TrySeeing();
+	void TryToSee();
 
-	void ValidateTargetAndNotify(AActor* Target);
+	void ValidateTargetAndNotify(AActor* InActor);
 
 	UPROPERTY(Category = "Sight", EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<AActor> TargetType;

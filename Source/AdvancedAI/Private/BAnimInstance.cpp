@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "BAnimInstance.h"
@@ -10,13 +10,13 @@ void UBAnimInstance::PlayMontage(EActionType PlayerActionType)
     UAnimMontage* Montage = GetMontageByActionType(PlayerActionType);
     if (nullptr == Montage)
     {
-        B_ASSERT_DEV(false, "ÇØ´ç ¸ùÅ¸ÁÖ°¡ Á¸ÀçÇÏÁö ¾Ê½À´Ï´Ù.");
+        B_ASSERT_DEV(false, "í•´ë‹¹ ëª½íƒ€ì£¼ê°€ ì¡´ì¬í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.");
         return;
     }
 
     if (true == Montage_IsPlaying(Montage))
     {
-        B_LOG_DEV("ÀÌ¹Ì ½ÇÇàÁßÀÔ´Ï´Ù.");
+        B_LOG_DEV("ì´ë¯¸ ì‹¤í–‰ì¤‘ì…ë‹ˆë‹¤.");
         return;
     }
 
@@ -28,13 +28,13 @@ void UBAnimInstance::StopMontage(EActionType PlayerActionType)
     UAnimMontage* Montage = GetMontageByActionType(PlayerActionType);
     if (nullptr == Montage)
     {
-        B_ASSERT_DEV(false, "ÇØ´ç ¸ùÅ¸ÁÖ°¡ Á¸ÀçÇÏÁö ¾Ê½À´Ï´Ù.");
+        B_ASSERT_DEV(false, "í•´ë‹¹ ëª½íƒ€ì£¼ê°€ ì¡´ì¬í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.");
         return;
     }
 
     if (false == Montage_IsPlaying(Montage))
     {
-        B_LOG_DEV("½ÇÇàÁßÀÎ »óÅÂ°¡ ¾Æ´Õ´Ï´Ù.");
+        B_LOG_DEV("ì‹¤í–‰ì¤‘ì¸ ìƒíƒœê°€ ì•„ë‹™ë‹ˆë‹¤.");
         return;
     }
 
@@ -47,13 +47,13 @@ void UBAnimInstance::MontageJumpToSection(EActionType PlayerActionType, int32 Se
     UAnimMontage* Montage = GetMontageByActionType(PlayerActionType);
     if (nullptr == Montage)
     {
-        B_ASSERT_DEV(false, "ÇØ´ç ¸ùÅ¸ÁÖ°¡ Á¸ÀçÇÏÁö ¾Ê½À´Ï´Ù.");
+        B_ASSERT_DEV(false, "í•´ë‹¹ ëª½íƒ€ì£¼ê°€ ì¡´ì¬í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.");
         return;
     }
 
     if (false == Montage_IsPlaying(Montage))
     {
-        B_LOG_DEV("½ÇÇàÁßÀÎ »óÅÂ°¡ ¾Æ´Õ´Ï´Ù.");
+        B_LOG_DEV("ì‹¤í–‰ì¤‘ì¸ ìƒíƒœê°€ ì•„ë‹™ë‹ˆë‹¤.");
         return;
     }
 
@@ -67,6 +67,6 @@ FName UBAnimInstance::SectionIndexToName(EActionType PlayerActionType, int32 Sec
 
 UAnimMontage* UBAnimInstance::GetMontageByActionType(EActionType PlayerActionType)
 {
-    B_ASSERT_DEV(false, "ºñÁ¤»óÀÔ´Ï´Ù.");
+    B_ASSERT_DEV(false, "ë¹„ì •ìƒì…ë‹ˆë‹¤.");
     return nullptr;
 }

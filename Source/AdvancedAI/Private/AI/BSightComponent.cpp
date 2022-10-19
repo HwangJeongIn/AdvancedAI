@@ -170,12 +170,12 @@ void UBSightComponent::SetSeeingInterval(float NewSeeingInterval)
 	}
 }
 
-void UBSightComponent::OnSeeTest(AActor* Target)
+void UBSightComponent::OnSeeTest(AActor* InActor)
 {
-	B_ASSERT_DEV(false, "I'm seeing [%s]", *GetNameSafe(Target));
+	B_ASSERT_DEV(false, "I'm seeing [%s]", *GetNameSafe(InActor));
 }
 
-void UBSightComponent::TrySeeing()
+void UBSightComponent::TryToSee()
 {
 	if (false == OnSee.IsBound())
 	{
@@ -225,7 +225,7 @@ void UBSightComponent::TrySeeing()
 	}
 }
 
-void UBSightComponent::ValidateTargetAndNotify(AActor* Target)
+void UBSightComponent::ValidateTargetAndNotify(AActor* InActor)
 {
 	const AActor* OwnerActor = GetOwner();
 	if (nullptr == OwnerActor)
@@ -233,7 +233,7 @@ void UBSightComponent::ValidateTargetAndNotify(AActor* Target)
 		return;
 	}
 
-	const FVector TargetLocation = Target->GetActorLocation();
+	const FVector TargetLocation = InActor->GetActorLocation();
 	const FVector OwnerActorLocation = OwnerActor->GetActorLocation();
 	const FVector OwnerActorToTarget = TargetLocation - OwnerActorLocation;
 
@@ -255,7 +255,7 @@ void UBSightComponent::ValidateTargetAndNotify(AActor* Target)
 		return;
 	}
 
-	OnSee.Broadcast(Target);
+	OnSee.Broadcast(InActor);
 }
 
 void UBSightComponent::OnUpdateSeeing()
@@ -271,7 +271,7 @@ void UBSightComponent::OnUpdateSeeing()
 		return;
 	}
 
-	TrySeeing();
+	TryToSee();
 
 	if (true == IsEnabled)
 	{

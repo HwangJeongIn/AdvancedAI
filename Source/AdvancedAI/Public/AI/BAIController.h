@@ -16,12 +16,37 @@ UCLASS()
 class ADVANCEDAI_API ABAIController : public AAIController
 {
 	GENERATED_BODY()
-protected:
-	
+
+public:
+	ABAIController();
+
+protected:	
 	virtual void BeginPlay() override;
+	virtual void OnPossess(APawn* InPawn) override;
+	virtual void OnUnPossess() override;
+
+public:
+	//UFUNCTION(BlueprintCallable)
+	AActor* GetTargetActor();
+	void SetTargetActor(AActor* InTargetActor);
 
 private:
 
+	UFUNCTION()
+	void OnSenseTarget(AActor* InTargetActor);
+
+	UPROPERTY(Category = "AI", EditDefaultsOnly, meta = (AllowPrivateAccess = "true"))
+	FName TargetActorKeyName;
+
+	UPROPERTY(Category = "AI", EditDefaultsOnly, meta = (AllowPrivateAccess = "true"))
+	FName OriginKeyName;
+
+	UPROPERTY(Category = "AI", VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	TWeakObjectPtr<AActor> TargetActor;
+
 	UPROPERTY(Category = "AI", EditDefaultsOnly, meta = (AllowPrivateAccess = "true"))
 	UBehaviorTree* BehaviorTree;
+
+	UPROPERTY()
+	TWeakObjectPtr<AActor> CachedSelfPawn;
 };

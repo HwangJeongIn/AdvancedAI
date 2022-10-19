@@ -15,11 +15,16 @@ class UBActionComponent;
 UENUM(BlueprintType)
 enum class EActionType : uint8
 {
+	None = 0,
 	PrimaryAttack,
 	SecondaryAttack,
 	Sprint,
-	AIPrimaryAttack
+	AIPrimaryAttack,
+	Count
 };
+
+FName GetActionTypeName(EActionType InActionType);
+
 
 USTRUCT()
 struct FActionBasicRunningData
@@ -43,6 +48,7 @@ class ADVANCEDAI_API UBAction : public UObject
 	GENERATED_BODY()
 	
 public:
+
 	/**
 	  * 기본적으로 UObject는 독립적인 리플리케이션을 지원하지 않는다.
 	  * Actor와 연결하여 리플리케이션 해야 한다. (Action을 생성할 때 OwnerActor를 Outer로 설정한다.)
@@ -92,6 +98,7 @@ protected:
 	UPROPERTY(ReplicatedUsing = "OnRep_BasicRunningData")
 	FActionBasicRunningData BasicRunningData;
 
+	/** 동일한 액션이지만, 내부 변수를 바꿀 수 있도록 지원하기 위해 ActionType과 ActionName을 분리 */
 	UPROPERTY(Category = "Action", EditDefaultsOnly)
 	EActionType ActionType;
 	

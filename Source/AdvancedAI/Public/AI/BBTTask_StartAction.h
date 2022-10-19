@@ -23,9 +23,9 @@ private:
 
 private:
 
-	UPROPERTY(Category = "AI", EditDefaultsOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(Category = "AI", EditAnywhere, meta = (AllowPrivateAccess = "true"))
 	FBlackboardKeySelector TargetActorKey;
 
-	UPROPERTY(Category = "AI", EditDefaultsOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(Category = "AI", EditAnywhere, meta = (AllowPrivateAccess = "true"))
 	FName ActionName;
 };

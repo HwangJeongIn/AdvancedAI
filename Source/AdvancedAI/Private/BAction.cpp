@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "BAction.h"
@@ -8,6 +8,22 @@
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Actor.h"
 
+
+FName GetActionTypeName(EActionType InActionType)
+{
+	B_COMPILE_DEV(5 == static_cast<uint8>(EActionType::Count), "여기도 확인해주세요");
+	switch (InActionType)
+	{
+	case EActionType::None: { return FName(); }
+	case EActionType::PrimaryAttack: { return "PrimaryAttack"; }
+	case EActionType::SecondaryAttack: { return "SecondaryAttack"; }
+	case EActionType::Sprint: { return "Sprint"; }
+	case EActionType::AIPrimaryAttack: { return "AIPrimaryAttack"; }
+	}
+
+	B_ASSERT_DEV(false, "%d => 알 수 없는 Enum 값입니다. 케이스를 추가해주세요.", static_cast<uint8>(InActionType));
+	return FName();
+}
 
 bool UBAction::IsSupportedForNetworking() const
 {

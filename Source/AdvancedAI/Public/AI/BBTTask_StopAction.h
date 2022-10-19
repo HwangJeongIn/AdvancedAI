@@ -20,6 +20,6 @@ private:
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 
 private:
-	UPROPERTY(Category = "AI", EditDefaultsOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(Category = "AI", EditAnywhere, meta = (AllowPrivateAccess = "true"))
 	FName ActionName;
 };

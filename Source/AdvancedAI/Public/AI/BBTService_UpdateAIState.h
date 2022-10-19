@@ -22,22 +22,27 @@ protected:
 
 
 public:
-	UFUNCTION(BlueprintCallable)
-	void SetMaxDistanceToChase(float InMaxDistanceToChase);
+	/*UFUNCTION(BlueprintCallable)
+	void SetMaxDistanceToChase(float InMaxDistanceToChase);*/
+
 
 private:
-	UPROPERTY(Category = "AI", EditDefaultsOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(Category = "AI", EditAnywhere, meta = (AllowPrivateAccess = "true"))
 	FBlackboardKeySelector TargetActorKey;
 
-	UPROPERTY(Category = "AI", EditDefaultsOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(Category = "AI", EditAnywhere, meta = (AllowPrivateAccess = "true"))
 	FBlackboardKeySelector HealthRateKey;
 
-	UPROPERTY(Category = "AI", EditDefaultsOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(Category = "AI", EditAnywhere, meta = (AllowPrivateAccess = "true"))
 	FBlackboardKeySelector CanAttackKey;
 
-	UPROPERTY(Category = "AI", EditDefaultsOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(Category = "AI", EditAnywhere, meta = (AllowPrivateAccess = "true"))
 	float MaxDistanceToChase;
 
-	UPROPERTY()
-	float MaxDistanceSquaredToChase;
+	UPROPERTY(Category = "AI", EditAnywhere, meta = (AllowPrivateAccess = "true"))
+	float MaxDistanceToAttack;
+
+
+	/*UPROPERTY()
+	float MaxDistanceSquaredToChase;*/
 };

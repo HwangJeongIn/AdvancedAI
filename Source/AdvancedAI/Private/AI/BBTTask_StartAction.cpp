@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "AI/BBTTask_StartAction.h"
@@ -19,42 +19,42 @@ EBTNodeResult::Type UBBTTask_StartAction::ExecuteTask(UBehaviorTreeComponent& Ow
 	AAIController* SelfController = OwnerComp.GetAIOwner();
 	if (nullptr == SelfController)
 	{
-		B_ASSERT_DEV(false, " ºñÁ¤»óÀÔ´Ï´Ù ");
+		B_ASSERT_DEV(false, " ë¹„ì •ìƒì…ë‹ˆë‹¤ ");
 		return EBTNodeResult::Failed;
 	}
 
 	APawn* SelfPawn = SelfController->GetPawn();
 	if (nullptr == SelfPawn)
 	{
-		B_ASSERT_DEV(false, " ºñÁ¤»óÀÔ´Ï´Ù ");
+		B_ASSERT_DEV(false, " ë¹„ì •ìƒì…ë‹ˆë‹¤ ");
 		return EBTNodeResult::Failed;
 	}
 
 	UBActionComponent* ActionComp = Cast<UBActionComponent>(SelfPawn->GetComponentByClass(UBActionComponent::StaticClass()));
 	if (nullptr == ActionComp)
 	{
-		B_ASSERT_DEV(false, " ActionÀÌ Á¸ÀçÇÏÁö ¾Ê½À´Ï´Ù. ");
+		B_ASSERT_DEV(false, " Actionì´ ì¡´ì¬í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤. ");
 		return EBTNodeResult::Failed;
 	}
 
 	UBlackboardComponent* BlackBoardComp = OwnerComp.GetBlackboardComponent();
-	B_ASSERT_DEV(BlackBoardComp, " ºñÁ¤»óÀÔ´Ï´Ù.");
+	B_ASSERT_DEV(BlackBoardComp, " ë¹„ì •ìƒì…ë‹ˆë‹¤.");
 	AActor* TargetActor = Cast<AActor>(BlackBoardComp->GetValueAsObject(TargetActorKey.SelectedKeyName));
 	if (nullptr == TargetActor)
 	{
-		B_LOG_DEV(" ´ë»óÀÌ ¾ø½À´Ï´Ù. ");
+		B_LOG_DEV(" ëŒ€ìƒì´ ì—†ìŠµë‹ˆë‹¤. ");
 		return EBTNodeResult::Failed;
 	}
 
 	if (false == UBStatusComponent::IsAliveActor(TargetActor))
 	{
-		B_LOG_DEV(" ÀÌ¹Ì »ç¸ÁÇÑ ´ë»óÀÔ´Ï´Ù. ");
+		B_LOG_DEV(" ì´ë¯¸ ì‚¬ë§í•œ ëŒ€ìƒì…ë‹ˆë‹¤. ");
 		return EBTNodeResult::Failed;
 	}
 
 	if (false == ActionComp->StartActionByNameIfCan(SelfPawn, ActionName))
 	{
-		B_ASSERT_DEV(false, " ºñÁ¤»óÀÔ´Ï´Ù. ");
+		B_ASSERT_DEV(false, " ë¹„ì •ìƒì…ë‹ˆë‹¤. ");
 		return EBTNodeResult::Failed;
 	}
 

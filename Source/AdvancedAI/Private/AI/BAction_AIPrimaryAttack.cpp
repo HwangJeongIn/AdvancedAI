@@ -29,30 +29,70 @@ void UBAction_AIPrimaryAttack::Initialize(UBActionComponent* NewActionComp)
 	}
 
 	UBAIAnimInstance* AIAnimInstance = Cast<UBAIAnimInstance>(AICharacter->GetMesh()->GetAnimInstance());
-	AIAnimInstance->OnAIPrimaryAttackHit.AddDynamic(this, &UBAction_AIPrimaryAttack::OnAIPrimaryAttackHit);
+	AIAnimInstance->OnNextAIPrimaryAttackCheck.AddDynamic(this, &UBAction_AIPrimaryAttack::OnNextAIPrimaryAttackCheck);
+	AIAnimInstance->OnAIPrimaryAttackHitCheck.AddDynamic(this, &UBAction_AIPrimaryAttack::OnAIPrimaryAttackHitCheck);
+
+	Clear();
 }
 
 void UBAction_AIPrimaryAttack::Start(AActor* InstigatorActor)
 {
 	ACharacter* AICharacter = Cast<ACharacter>(InstigatorActor);
-	if (AICharacter)
+	if (nullptr == AICharacter)
 	{
-		UBAIAnimInstance* AIAnimInstance = Cast<UBAIAnimInstance>(AICharacter->GetMesh()->GetAnimInstance());
-		if (AIAnimInstance)
-		{
-			AIAnimInstance->PlayMontage(ActionType);
-		}
+		B_ASSERT_DEV(false, "AICharacter 가 없습니다.");
+		return;
 	}
 
+	UBAIAnimInstance* AIAnimInstance = Cast<UBAIAnimInstance>(AICharacter->GetMesh()->GetAnimInstance());
+	if (nullptr == AIAnimInstance)
+	{
+		B_ASSERT_DEV(false, "AnimInstance 가 없습니다.");
+		return;
+	}
+
+	AIAnimInstance->PlayMontage(ActionType);
 	Super::Start(InstigatorActor);
 }
 
 void UBAction_AIPrimaryAttack::Stop(AActor* InstigatorActor)
 {
+	Clear();
 	Super::Stop(InstigatorActor);
 }
 
-void UBAction_AIPrimaryAttack::OnAIPrimaryAttackHit()
+void UBAction_AIPrimaryAttack::Clear()
+{
+	SectionIndex = 0;
+}
+
+void UBAction_AIPrimaryAttack::OnNextAIPrimaryAttackCheck()
+{
+	if (false == IsRunning())
+	{
+		return;
+	}
+
+	SectionIndex = (SectionIndex + 1) % MaxSectionIndex;
+
+	ACharacter* AICharacter = Cast<ACharacter>(GetOwningActionComponent()->GetOwner());
+	if (nullptr == AICharacter)
+	{
+		B_ASSERT_DEV(false, "AICharacter 가 없습니다.");
+		return;
+	}
+
+	UBAIAnimInstance* AIAnimInstance = Cast<UBAIAnimInstance>(AICharacter->GetMesh()->GetAnimInstance());
+	if (nullptr == AIAnimInstance)
+	{
+		B_ASSERT_DEV(false, "AnimInstance 가 없습니다.");
+		return;
+	}
+
+	AIAnimInstance->MontageJumpToSection(ActionType, SectionIndex);
+}
+
+void UBAction_AIPrimaryAttack::OnAIPrimaryAttackHitCheck()
 {
 	if (false == IsRunning())
 	{

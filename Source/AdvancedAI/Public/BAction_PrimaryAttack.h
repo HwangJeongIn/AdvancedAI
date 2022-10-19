@@ -27,10 +27,10 @@ private:
 	void Clear();
 
 	UFUNCTION()
-	void OnPrimaryAttackHit();
+	void OnNextPrimaryAttackCheck();
 
 	UFUNCTION()
-	void OnNextPrimaryAttackCheck();
+	void OnPrimaryAttackHitCheck();
 
 	int32 SectionIndex;
 

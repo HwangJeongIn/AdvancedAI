@@ -19,11 +19,20 @@ public:
 	virtual void Start(AActor* InstigatorActor) override;
 	virtual void Stop(AActor* InstigatorActor) override;
 
-
 private:
 
+	void Clear();
+
 	UFUNCTION()
-	void OnAIPrimaryAttackHit();
+	void OnAIPrimaryAttackHitCheck();
+
+	UFUNCTION()
+	void OnNextAIPrimaryAttackCheck();
+
+	int32 SectionIndex;
+
+	UPROPERTY(Category = "AttackAction", EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	int32 MaxSectionIndex = 5;
 
 	UPROPERTY(Category = "AttackAction", EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	float SweepRadius = 20.0f;

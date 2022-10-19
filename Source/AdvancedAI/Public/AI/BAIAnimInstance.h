@@ -19,6 +19,9 @@ protected:
 private:
 
 	UFUNCTION()
+	void AnimNotify_NextAIPrimaryAttackCheck();
+
+	UFUNCTION()
 	void AnimNotify_AIPrimaryAttackHitCheck();
 
 	UPROPERTY(Category = "AttackAction", EditDefaultsOnly, BlueprintReadOnly, Meta = (AllowPrivateAccess = true))
@@ -26,5 +29,8 @@ private:
 
 public:
 	UPROPERTY(Category = "AttackAction", BlueprintAssignable)
-	FOnActionAnimationStateChanged OnAIPrimaryAttackHit;
+	FOnActionAnimationStateChanged OnNextAIPrimaryAttackCheck;
+	
+	UPROPERTY(Category = "AttackAction", BlueprintAssignable)
+	FOnActionAnimationStateChanged OnAIPrimaryAttackHitCheck;
 };

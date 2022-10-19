@@ -21,10 +21,12 @@ UAnimMontage* UBPlayerAnimInstance::GetMontageByActionType(EActionType PlayerAct
 
 void UBPlayerAnimInstance::AnimNotify_NextPrimaryAttackCheck()
 {
+    //B_LOG_DEV("Test");
     OnNextPrimaryAttackCheck.Broadcast();
 }
 
 void UBPlayerAnimInstance::AnimNotify_PrimaryAttackHitCheck()
 {
-    OnPrimaryAttackHit.Broadcast();
+    //B_LOG_DEV("Test");
+    OnPrimaryAttackHitCheck.Broadcast();
 }

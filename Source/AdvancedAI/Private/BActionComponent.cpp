@@ -182,7 +182,7 @@ bool UBActionComponent::StartActionByName(AActor* Instigator, const FName& Actio
 	UBAction* TargetAction = GetActionByName(ActionName);
 	if (nullptr == TargetAction)
 	{
-		B_ASSERT_DEV(false, "비정상입니다.");
+		B_ASSERT_DEV(false, "[%s]에 [%s] 액션이 존재하지 않습니다.", *GetNameSafe(Instigator), *ActionName.ToString());
 		return false;
 	}
 
@@ -190,7 +190,7 @@ bool UBActionComponent::StartActionByName(AActor* Instigator, const FName& Actio
 	{
 		if (false == WithoutActionStateValidation)
 		{
-			B_ASSERT_DEV(false, "비정상입니다.");
+			B_ASSERT_DEV(false, "[%s]가 [%s] 액션을 이미 진행하고 있습니다.", *GetNameSafe(Instigator), *ActionName.ToString());
 			return false;
 		}
 		return true;
@@ -220,7 +220,7 @@ bool UBActionComponent::StopActionByName(AActor* Instigator, const FName& Action
 	UBAction* TargetAction = GetActionByName(ActionName);
 	if (nullptr == TargetAction)
 	{
-		B_ASSERT_DEV(false, "비정상입니다.");
+		B_ASSERT_DEV(false, "[%s]에 [%s] 액션이 존재하지 않습니다.", *GetNameSafe(Instigator), *ActionName.ToString());
 		return false;
 	}
 
@@ -228,7 +228,7 @@ bool UBActionComponent::StopActionByName(AActor* Instigator, const FName& Action
 	{
 		if (false == WithoutActionStateValidation)
 		{
-			B_ASSERT_DEV(false, "비정상입니다.");
+			B_ASSERT_DEV(false, "[%s]가 [%s] 액션을 진행하고 있지 않습니다.", *GetNameSafe(Instigator), *ActionName.ToString());
 			return true;
 		}
 		return false;

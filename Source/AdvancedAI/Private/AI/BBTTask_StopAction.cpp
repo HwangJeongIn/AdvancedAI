@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "AI/BBTTask_StopAction.h"
@@ -19,27 +19,27 @@ EBTNodeResult::Type UBBTTask_StopAction::ExecuteTask(UBehaviorTreeComponent& Own
 	AAIController* SelfController = OwnerComp.GetAIOwner();
 	if (nullptr == SelfController)
 	{
-		B_ASSERT_DEV(false, " ºñÁ¤»óÀÔ´Ï´Ù ");
+		B_ASSERT_DEV(false, " ë¹„ì •ìƒì…ë‹ˆë‹¤ ");
 		return EBTNodeResult::Failed;
 	}
 
 	APawn* SelfPawn = SelfController->GetPawn();
 	if (nullptr == SelfPawn)
 	{
-		B_ASSERT_DEV(false, " ºñÁ¤»óÀÔ´Ï´Ù ");
+		B_ASSERT_DEV(false, " ë¹„ì •ìƒì…ë‹ˆë‹¤ ");
 		return EBTNodeResult::Failed;
 	}
 
 	UBActionComponent* ActionComp = Cast<UBActionComponent>(SelfPawn->GetComponentByClass(UBActionComponent::StaticClass()));
 	if (nullptr == ActionComp)
 	{
-		B_ASSERT_DEV(false, " ActionÀÌ Á¸ÀçÇÏÁö ¾Ê½À´Ï´Ù. ");
+		B_ASSERT_DEV(false, " Actionì´ ì¡´ì¬í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤. ");
 		return EBTNodeResult::Failed;
 	}
 
 	if (false == ActionComp->StopActionByNameIfCan(SelfPawn, ActionName))
 	{
-		B_ASSERT_DEV(false, " ºñÁ¤»óÀÔ´Ï´Ù. ");
+		B_ASSERT_DEV(false, " ë¹„ì •ìƒì…ë‹ˆë‹¤. ");
 		return EBTNodeResult::Failed;
 	}
 

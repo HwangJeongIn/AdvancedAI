@@ -10,14 +10,17 @@
 
 UBBTService_UpdateAIState::UBBTService_UpdateAIState()
 {
-	SetMaxDistanceToChase(10000);
+	MaxDistanceToChase = 1000.0f;
+	MaxDistanceToAttack = 150.0f;
 }
 
+/*
 void UBBTService_UpdateAIState::SetMaxDistanceToChase(float InMaxDistanceToChase)
 {
 	MaxDistanceToChase = InMaxDistanceToChase;
 	MaxDistanceSquaredToChase = MaxDistanceToChase * MaxDistanceToChase;
 }
+*/
 
 void UBBTService_UpdateAIState::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
 {
@@ -60,17 +63,22 @@ void UBBTService_UpdateAIState::TickNode(UBehaviorTreeComponent& OwnerComp, uint
 	AActor* TargetActor = Cast<AActor>(BlackBoardComp->GetValueAsObject(TargetActorKey.SelectedKeyName));
 	if (TargetActor) // 없을 수 있다.
 	{
-		const float DistanceSquared = (TargetActor->GetActorLocation() - SelfPawn->GetActorLocation()).SizeSquared();
+		FVector ToTarget = TargetActor->GetActorLocation() - SelfPawn->GetActorLocation();
+		ToTarget.Z = 0;
+		const float DistanceSquared = ToTarget.SizeSquared();
 
-		if (100.0f < DistanceSquared)
+		//B_LOG_DEV("%.1f, %.1f", DistanceSquared, MaxDistanceToAttack * MaxDistanceToAttack);
+		if ((MaxDistanceToAttack * MaxDistanceToAttack) > DistanceSquared)
 		{
+			//B_LOG_DEV("1");
 			BlackBoardComp->SetValueAsBool(CanAttackKey.SelectedKeyName, true);
 		}
 		else
 		{
+			//B_LOG_DEV("2");
 			BlackBoardComp->SetValueAsBool(CanAttackKey.SelectedKeyName, false);
 
-			if (MaxDistanceToChase < DistanceSquared)
+			if ((MaxDistanceToChase * MaxDistanceToChase) < DistanceSquared)
 			{
 				BlackBoardComp->SetValueAsObject(TargetActorKey.SelectedKeyName, nullptr);
 			}
