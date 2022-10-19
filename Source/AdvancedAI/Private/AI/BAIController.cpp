@@ -16,6 +16,8 @@ ABAIController::ABAIController()
 
 void ABAIController::BeginPlay()
 {
+	Super::BeginPlay();
+
 	if (nullptr == BehaviorTree)
 	{
 		B_ASSERT_DEV(false, "비정상입니다.");

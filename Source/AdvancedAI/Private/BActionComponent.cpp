@@ -116,6 +116,14 @@ void UBActionComponent::AddAction(AActor* Instigator, TSubclassOf<UBAction> Acti
 		return;
 	}
 
+	/* TODO : 검증 추가
+	* GetActionByClass
+	for (TFieldIterator<EActionType> Prop(ActionClass); Prop; ++Prop)
+	{
+		EActionType Value  = Prop->GetPropertyValue(ActionClass);
+	}
+	*/
+
 	UBAction* NewAction = NewObject<UBAction>(OwnerActor, ActionClass);
 	if (nullptr == NewAction)
 	{
@@ -140,7 +148,7 @@ void UBActionComponent::RemoveAction(UBAction* ActionToRemove)
 	ActivatedActions.Remove(ActionToRemove);
 }
 
-UBAction* UBActionComponent::GetAction(TSubclassOf<UBAction> ActionClass) const
+UBAction* UBActionComponent::GetActionByClass(TSubclassOf<UBAction> ActionClass) const
 {
 	for (UBAction* Action : ActivatedActions)
 	{
@@ -156,12 +164,12 @@ UBAction* UBActionComponent::GetAction(TSubclassOf<UBAction> ActionClass) const
 	return nullptr;
 }
 
-UBAction* UBActionComponent::GetActionByName(const FName& ActionName) const
+UBAction* UBActionComponent::GetAction(const EActionType& ActionType) const
 {
 	for (UBAction* Action : ActivatedActions)
 	{
 		B_ASSERT_DEV(Action, "왜 발생하는 지 확인해야합니다.");
-		if (nullptr == Action || false == Action->Compare(ActionName))
+		if (nullptr == Action || false == Action->Compare(ActionType))
 		{
 			continue;
 		}
@@ -172,17 +180,17 @@ UBAction* UBActionComponent::GetActionByName(const FName& ActionName) const
 	return nullptr;
 }
 
-bool UBActionComponent::StartActionByName(AActor* Instigator, const FName& ActionName, bool WithoutActionStateValidation /*= false*/)
+bool UBActionComponent::StartAction(AActor* Instigator, const EActionType& ActionType, bool WithoutActionStateValidation /*= false*/)
 {
 	if (false == IsInitialized)
 	{
 		return false;
 	}
 
-	UBAction* TargetAction = GetActionByName(ActionName);
+	UBAction* TargetAction = GetAction(ActionType);
 	if (nullptr == TargetAction)
 	{
-		B_ASSERT_DEV(false, "[%s]에 [%s] 액션이 존재하지 않습니다.", *GetNameSafe(Instigator), *ActionName.ToString());
+		B_ASSERT_DEV(false, "[%s]에 [%s] 액션이 존재하지 않습니다.", *GetNameSafe(Instigator), *GetActionTypeName(ActionType).ToString());
 		return false;
 	}
 
@@ -190,7 +198,7 @@ bool UBActionComponent::StartActionByName(AActor* Instigator, const FName& Actio
 	{
 		if (false == WithoutActionStateValidation)
 		{
-			B_ASSERT_DEV(false, "[%s]가 [%s] 액션을 이미 진행하고 있습니다.", *GetNameSafe(Instigator), *ActionName.ToString());
+			B_ASSERT_DEV(false, "[%s]가 [%s] 액션을 이미 진행하고 있습니다.", *GetNameSafe(Instigator), *GetActionTypeName(ActionType).ToString());
 			return false;
 		}
 		return true;
@@ -198,29 +206,29 @@ bool UBActionComponent::StartActionByName(AActor* Instigator, const FName& Actio
 
 	if (false == GetOwner()->HasAuthority())
 	{
-		ServerStartAction(Instigator, ActionName);
+		ServerStartAction(Instigator, ActionType);
 	}
 
 	TargetAction->Start(Instigator);
 	return true;
 }
 
-bool UBActionComponent::StartActionByNameIfCan(AActor* Instigator, const FName& ActionName)
+bool UBActionComponent::StartActionIfCan(AActor* Instigator, const EActionType& ActionType)
 {
-	return StartActionByName(Instigator, ActionName, true);
+	return StartAction(Instigator, ActionType, true);
 }
 
-bool UBActionComponent::StopActionByName(AActor* Instigator, const FName& ActionName, bool WithoutActionStateValidation /*= false*/)
+bool UBActionComponent::StopAction(AActor* Instigator, const EActionType& ActionType, bool WithoutActionStateValidation /*= false*/)
 {
 	if (false == IsInitialized)
 	{
 		return false;
 	}
 
-	UBAction* TargetAction = GetActionByName(ActionName);
+	UBAction* TargetAction = GetAction(ActionType);
 	if (nullptr == TargetAction)
 	{
-		B_ASSERT_DEV(false, "[%s]에 [%s] 액션이 존재하지 않습니다.", *GetNameSafe(Instigator), *ActionName.ToString());
+		B_ASSERT_DEV(false, "[%s]에 [%s] 액션이 존재하지 않습니다.", *GetNameSafe(Instigator), *GetActionTypeName(ActionType).ToString());
 		return false;
 	}
 
@@ -228,7 +236,7 @@ bool UBActionComponent::StopActionByName(AActor* Instigator, const FName& Action
 	{
 		if (false == WithoutActionStateValidation)
 		{
-			B_ASSERT_DEV(false, "[%s]가 [%s] 액션을 진행하고 있지 않습니다.", *GetNameSafe(Instigator), *ActionName.ToString());
+			B_ASSERT_DEV(false, "[%s]가 [%s] 액션을 진행하고 있지 않습니다.", *GetNameSafe(Instigator), *GetActionTypeName(ActionType).ToString());
 			return true;
 		}
 		return false;
@@ -236,27 +244,27 @@ bool UBActionComponent::StopActionByName(AActor* Instigator, const FName& Action
 
 	if (false == GetOwner()->HasAuthority())
 	{
-		ServerStopAction(Instigator, ActionName);
+		ServerStopAction(Instigator, ActionType);
 	}
 
 	TargetAction->Stop(Instigator);
 	return true;
 }
 
-bool UBActionComponent::StopActionByNameIfCan(AActor* Instigator, const FName& ActionName)
+bool UBActionComponent::StopActionIfCan(AActor* Instigator, const EActionType& ActionType)
 {
-	return StopActionByName(Instigator, ActionName, true);
+	return StopAction(Instigator, ActionType, true);
 }
 
 
-void UBActionComponent::ServerStartAction_Implementation(AActor* Instigator, FName ActionName)
+void UBActionComponent::ServerStartAction_Implementation(AActor* Instigator, EActionType ActionType)
 {
-	StartActionByName(Instigator, ActionName);
+	StartAction(Instigator, ActionType);
 }
 
 
-void UBActionComponent::ServerStopAction_Implementation(AActor* Instigator, FName ActionName)
+void UBActionComponent::ServerStopAction_Implementation(AActor* Instigator, EActionType ActionType)
 {
-	StopActionByName(Instigator, ActionName);
+	StopAction(Instigator, ActionType);
 }
 

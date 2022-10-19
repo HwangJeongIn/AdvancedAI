@@ -8,7 +8,7 @@
 
 
 class UBAction;
-
+enum class EActionType : uint8;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnActionStateChanged, UBActionComponent*, OwningActionComp, UBAction*, Action);
 
@@ -44,31 +44,31 @@ public:
 	void RemoveAction(UBAction* ActionToRemove);
 
 	UFUNCTION(Category = "Actions", BlueprintCallable)
-	UBAction* GetAction(TSubclassOf<UBAction> ActionClass) const;
+	UBAction* GetActionByClass(TSubclassOf<UBAction> ActionClass) const;
 
 	UFUNCTION(Category = "Actions", BlueprintCallable)
-	UBAction* GetActionByName(const FName& ActionName) const;
+	UBAction* GetAction(const EActionType& ActionType) const;
 
 	UFUNCTION(Category = "Actions", BlueprintCallable)
-	bool StartActionByName(AActor* Instigator, const FName& ActionName, bool WithoutActionStateValidation = false);
+	bool StartAction(AActor* Instigator, const EActionType& ActionType, bool WithoutActionStateValidation = false);
 
 	UFUNCTION(Category = "Actions", BlueprintCallable)
-	bool StartActionByNameIfCan(AActor* Instigator, const FName& ActionName);
+	bool StartActionIfCan(AActor* Instigator, const EActionType& ActionType);
 
 	UFUNCTION(Category = "Actions", BlueprintCallable)
-	bool StopActionByName(AActor* Instigator, const FName& ActionName, bool WithoutActionStateValidation = false);
+	bool StopAction(AActor* Instigator, const EActionType& ActionType, bool WithoutActionStateValidation = false);
 
 	UFUNCTION(Category = "Actions", BlueprintCallable)
-	bool StopActionByNameIfCan(AActor* Instigator, const FName& ActionName);
+	bool StopActionIfCan(AActor* Instigator, const EActionType& ActionType);
 
 
 private:
 
 	UFUNCTION(Server, Reliable)
-	void ServerStartAction(AActor* Instigator, FName ActionName);
+	void ServerStartAction(AActor* Instigator, EActionType ActionName);
 
 	UFUNCTION(Server, Reliable)
-	void ServerStopAction(AActor* Instigator, FName ActionName);
+	void ServerStopAction(AActor* Instigator, EActionType ActionName);
 
 	UPROPERTY(Category = "Actions", EditAnywhere, meta = (AllowPrivateAccess = "true"))
 	TArray<TSubclassOf<UBAction>> DefaultActionClasses;

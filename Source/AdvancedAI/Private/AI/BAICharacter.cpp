@@ -3,6 +3,11 @@
 
 #include "AI/BAICharacter.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
+
+#include "AIController.h"
+#include "BrainComponent.h"
 #include "BStatusComponent.h"
 #include "BActionComponent.h"
 #include "AI/BSightComponent.h"
@@ -35,5 +40,17 @@ void ABAICharacter::BeginPlay()
 
 void ABAICharacter::OnHealthChanged(AActor* InstigatorActor, UBStatusComponent* OwningStatusComp, float NewHealth, float DeltaHealth)
 {
+	if (0.0f >= NewHealth)
+	{
+		AAIController* SelfAIController = Cast<AAIController>(GetController());
+		if (SelfAIController)
+		{
+			SelfAIController->GetBrainComponent()->StopLogic("Dead");
+		}
 
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		GetCharacterMovement()->DisableMovement();
+
+		SetLifeSpan(3.0f);
+	}
 }

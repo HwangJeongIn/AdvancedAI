@@ -98,9 +98,14 @@ void UBAction::Stop(AActor* InstigatorActor)
 	Comp->OnActionStopped.Broadcast(Comp, this);
 }
 
-bool UBAction::Compare(const FName& InputName) const
+bool UBAction::Compare(const EActionType& InActionType) const
 {
-	return (InputName == ActionName);
+	return (InActionType == ActionType);
+}
+
+bool UBAction::Compare(const UBAction& InAction) const
+{
+	return (InAction.ActionType == ActionType);
 }
 
 void UBAction::OnRep_BasicRunningData()

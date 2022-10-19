@@ -89,7 +89,8 @@ public:
 	virtual void Start(AActor* InstigatorActor);
 	virtual void Stop(AActor* InstigatorActor);
 
-	bool Compare(const FName& InputName) const;
+	bool Compare(const EActionType& InActionType) const;
+	bool Compare(const UBAction& InAction) const;
 
 protected:
 	UFUNCTION()
@@ -102,6 +103,6 @@ protected:
 	UPROPERTY(Category = "Action", EditDefaultsOnly)
 	EActionType ActionType;
 	
-	UPROPERTY(Category = "Action", EditDefaultsOnly)
-	FName ActionName;
+	/*UPROPERTY(Category = "Action", EditDefaultsOnly)
+	FName ActionName;*/
 };

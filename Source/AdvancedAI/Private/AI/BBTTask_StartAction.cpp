@@ -6,6 +6,7 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BStatusComponent.h"
 #include "BActionComponent.h"
+#include "BAction.h"
 
 
 
@@ -38,7 +39,12 @@ EBTNodeResult::Type UBBTTask_StartAction::ExecuteTask(UBehaviorTreeComponent& Ow
 	}
 
 	UBlackboardComponent* BlackBoardComp = OwnerComp.GetBlackboardComponent();
-	B_ASSERT_DEV(BlackBoardComp, " 비정상입니다.");
+	if (nullptr == BlackBoardComp)
+	{
+		B_ASSERT_DEV(BlackBoardComp, " 비정상입니다.");
+		return EBTNodeResult::Failed;
+	}
+
 	AActor* TargetActor = Cast<AActor>(BlackBoardComp->GetValueAsObject(TargetActorKey.SelectedKeyName));
 	if (nullptr == TargetActor)
 	{
@@ -52,11 +58,13 @@ EBTNodeResult::Type UBBTTask_StartAction::ExecuteTask(UBehaviorTreeComponent& Ow
 		return EBTNodeResult::Failed;
 	}
 
-	if (false == ActionComp->StartActionByNameIfCan(SelfPawn, ActionName))
+	if (false == ActionComp->StartActionIfCan(SelfPawn, ActionType))
 	{
 		B_ASSERT_DEV(false, " 비정상입니다. ");
 		return EBTNodeResult::Failed;
 	}
+
+	BlackBoardComp->SetValueAsEnum(CurrentActionTypeKey.SelectedKeyName, static_cast<uint8>(ActionType));
 
 	return EBTNodeResult::Succeeded;
 }

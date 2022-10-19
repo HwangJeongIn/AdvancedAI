@@ -12,6 +12,7 @@
 #include "BActionComponent.h"
 #include "BPlayerAnimInstance.h"
 #include "BPlayerController.h"
+#include "BAction.h"
 
 
 ABPlayer::ABPlayer()
@@ -203,12 +204,12 @@ void ABPlayer::InitializeActionComponent()
 
 void ABPlayer::PrimaryAttackStart()
 {
-	ActionComp->StartActionByName(this, "PrimaryAttack");
+	ActionComp->StartAction(this, EActionType::PrimaryAttack);
 }
 
 void ABPlayer::PrimaryAttackStop()
 {
-	ActionComp->StopActionByName(this, "PrimaryAttack");
+	ActionComp->StopAction(this, EActionType::PrimaryAttack);
 }
 
 void ABPlayer::SecondaryAttack()
@@ -223,12 +224,12 @@ void ABPlayer::Dash()
 
 void ABPlayer::SprintStart()
 {
-	ActionComp->StartActionByName(this, "Sprint");
+	ActionComp->StartAction(this, EActionType::Sprint);
 }
 
 void ABPlayer::SprintEnd()
 {
-	ActionComp->StopActionByName(this, "Sprint");
+	ActionComp->StopAction(this, EActionType::Sprint);
 }
 
 void ABPlayer::OnPrimaryAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)

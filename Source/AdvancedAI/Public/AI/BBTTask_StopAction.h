@@ -6,6 +6,8 @@
 #include "BehaviorTree/BTTaskNode.h"
 #include "BBTTask_StopAction.generated.h"
 
+
+enum class EActionType : uint8;
 /**
  * 
  */
@@ -20,6 +22,10 @@ private:
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 
 private:
+
 	UPROPERTY(Category = "AI", EditAnywhere, meta = (AllowPrivateAccess = "true"))
-	FName ActionName;
+	FBlackboardKeySelector CurrentActionTypeKey;
+
+	//UPROPERTY(Category = "AI", EditAnywhere, meta = (AllowPrivateAccess = "true"))
+	//EActionType ActionType;
 };
